@@ -172,7 +172,7 @@
             <div>
                 <div class="font-bold text-lg mb-1">{{ task.title || 'Untitled' }}</div>
                 <hr class="border-t-2 border-primary/50 my-2" />
-                <p class="text-sm whitespace-pre-wrap">{{ task.description }}</p>
+                <p class="text-sm whitespace-pre-wrap break-words break-all">{{ task.description }}</p>
             </div>
 
             <!-- PO Feedback Signal -->
