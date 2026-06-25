@@ -311,7 +311,7 @@ class TaskAiService
         }
 
         $summary .= "Current Board Status:\n";
-        $stmt = $this->pdo->prepare("SELECT id, title, description, status FROM {$prefix}tasks WHERE project_name = :project_name ORDER BY status, id");
+        $stmt = $this->pdo->prepare("SELECT id, title, description, status, generated_code FROM {$prefix}tasks WHERE project_name = :project_name ORDER BY status, id");
         $stmt->execute([':project_name' => $projectName]);
         $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -320,6 +320,9 @@ class TaskAiService
                 continue;
             }
             $summary .= "- [{$task['status']}] {$task['title']} | {$task['description']}\n";
+            if (!empty($task['generated_code'])) {
+                $summary .= "  Generated Code:\n  ```\n  " . str_replace("\n", "\n  ", $task['generated_code']) . "\n  ```\n";
+            }
         }
 
         return $summary;
