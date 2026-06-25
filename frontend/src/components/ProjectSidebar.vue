@@ -90,6 +90,7 @@
                                 type="submit"
                                 class="btn btn-primary bg-zinc-400"
                             >
+                                <span v-if="loading" class="loading loading-spinner"></span>
                                 {{ loading ? "Generating..." : "Generate AI" }}
                             </button>
                             <button
