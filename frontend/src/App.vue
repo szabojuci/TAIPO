@@ -134,7 +134,10 @@
 
                 <KanbanBoard v-else-if="currentProject" :columns="columns" :tasks="tasks"
                     :current-project="currentProject" :max-title-length="appConfig.maxTitleLength"
-                    :max-description-length="appConfig.maxDescriptionLength" @task-updated="refreshTasks"
+                    :max-description-length="appConfig.maxDescriptionLength" 
+                    :is-auto-sprint-active="isAutoSprintActive"
+                    @toggle-auto-sprint="toggleAutoSprint"
+                    @task-updated="refreshTasks"
                     @task-deleted="refreshTasks" @task-added="refreshTasks" @decompose="handleDecompose"
                     @generate-code="handleGenerateCode" @generate-ac="handleGenerateAc" @query-task="handleQueryTask" @ai-review="handleAiReview"
                     @refine-backlog="handleRefineBacklog" @show-notification="showNotification" />
@@ -274,6 +277,81 @@ const columns = ref({
     'REVIEW WIP:2': 'info',
     'DONE': 'success',
 });
+
+// Auto-Sprint State
+const isAutoSprintActive = ref(false);
+
+const toggleAutoSprint = async () => {
+    isAutoSprintActive.value = !isAutoSprintActive.value;
+    if (isAutoSprintActive.value) {
+        showNotification("Auto-Sprint started! AI Agents are taking over.", "success");
+        runAutoSprint();
+    } else {
+        showNotification("Auto-Sprint stopped.", "warning");
+    }
+};
+
+const runAutoSprint = async () => {
+    while (isAutoSprintActive.value) {
+        await refreshTasks();
+        let actionTaken = false;
+        
+        // Priority 1: AI Review in REVIEW column
+        const reviewTask = tasks.value['REVIEW WIP:2']?.[0];
+        if (reviewTask) {
+            showNotification(`[Auto-Sprint] AI PO is reviewing task: ${reviewTask.title}`);
+            try {
+                await api.aiReviewTask(reviewTask.id);
+                actionTaken = true;
+            } catch (e) {
+                console.error(e);
+            }
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+        }
+        
+        // Priority 2: Move from TESTING to REVIEW
+        const testingTask = tasks.value['TESTING WIP:2']?.[0];
+        if (testingTask && (tasks.value['REVIEW WIP:2']?.length || 0) < 2) {
+            showNotification(`[Auto-Sprint] Moving task to REVIEW: ${testingTask.title}`);
+            await api.updateStatus(testingTask.id, 'REVIEW WIP:2', currentProject.value);
+            actionTaken = true;
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+        }
+
+        // Priority 3: Generate Code in IMPLEMENTATION
+        const implTask = tasks.value['IMPLEMENTATION WIP:3']?.[0];
+        if (implTask) {
+            showNotification(`[Auto-Sprint] AI Developer is coding task: ${implTask.title}`);
+            try {
+                await api.generateCode(implTask.id, implTask.description);
+                await api.updateStatus(implTask.id, 'TESTING WIP:2', currentProject.value);
+                actionTaken = true;
+            } catch(e) {
+                console.error(e);
+            }
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+        }
+
+        // Priority 4: Move from BACKLOG to IMPLEMENTATION
+        const backlogTask = tasks.value['SPRINT BACKLOG']?.[0];
+        if (backlogTask && (tasks.value['IMPLEMENTATION WIP:3']?.length || 0) < 3) {
+            showNotification(`[Auto-Sprint] Pulling task into Sprint: ${backlogTask.title}`);
+            await api.updateStatus(backlogTask.id, 'IMPLEMENTATION WIP:3', currentProject.value);
+            actionTaken = true;
+            await new Promise(r => setTimeout(r, 2000));
+            continue;
+        }
+
+        if (!actionTaken) {
+            isAutoSprintActive.value = false;
+            showNotification("Auto-Sprint finished or blocked by WIP limits!", "info");
+            break;
+        }
+    }
+};
 
 // Authentication Handlers
 const checkAuth = async () => {

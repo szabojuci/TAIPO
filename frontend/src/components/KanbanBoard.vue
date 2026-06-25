@@ -28,9 +28,17 @@
                 </button>
                 <button
                     @click="$emit('refine-backlog')"
+                    :disabled="isAutoSprintActive"
                     class="w-full mt-2 bg-secondary text-secondary-content py-2 px-4 rounded hover:bg-secondary-focus transition duration-300 flex items-center justify-center gap-2"
                 >
                     🪄 Auto-Refine
+                </button>
+                <button
+                    @click="$emit('toggle-auto-sprint')"
+                    :class="['w-full mt-2 text-white py-2 px-4 rounded transition duration-300 flex items-center justify-center gap-2 font-bold', isAutoSprintActive ? 'bg-error hover:bg-error/80' : 'bg-success hover:bg-success/80']"
+                >
+                    <span v-if="isAutoSprintActive" class="loading loading-spinner loading-sm"></span>
+                    {{ isAutoSprintActive ? '⏹️ Stop Sprint' : '▶️ Start Auto-Sprint' }}
                 </button>
             </div>
 
@@ -127,6 +135,7 @@ const props = defineProps({
     currentProject: String,
     maxTitleLength: Number,
     maxDescriptionLength: Number,
+    isAutoSprintActive: Boolean,
 });
 
 const emit = defineEmits([
@@ -138,6 +147,10 @@ const emit = defineEmits([
     "show-notification",
     "query-task",
     "request-view",
+    "refine-backlog",
+    "ai-review",
+    "generate-ac",
+    "toggle-auto-sprint",
 ]);
 
 const isTaskModalOpen = ref(false);
