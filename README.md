@@ -1,37 +1,90 @@
 # 🤖 TAIPO - The AI Product Owner (Kanban Board)
 
-An intelligent, web-based **Agile Project Management Tool** that integrates **Generative AI** (Google Gemini) into the core of modern Agile workflows. This system not only visualizes tasks but acts as a virtual **Product Owner and Developer**, automating planning, refinement, coding, and code-review processes.
+An intelligent, web-based **Agile Project Management Tool** that integrates **Generative AI (Google Gemini 2.0)** deeply into the core of modern Agile workflows. 
+
+Unlike traditional Kanban boards that only track the status of tasks, **TAIPO** acts as an active participant in your team. It functions as a virtual **Product Owner**, **Agile Coach**, and **Developer**, automating planning, backlog refinement, coding, and code-review processes.
 
 ---
 
-## 🌟 Overview
+## 🌟 Comprehensive Overview
 
-The **TAIPO (The AI Product Owner)** system is designed to simulate a complete software development lifecycle enhanced by AI. It enforces Agile discipline through **Work In Progress (WIP) limits** and takes over repetitive management and development tasks using the **Google Gemini API**.
+The **TAIPO** system is designed to simulate a complete software development lifecycle enhanced by Large Language Models (LLMs). It enforces Agile discipline through strict **Work In Progress (WIP) limits** and takes over repetitive management and development tasks.
 
-### 🚀 Key AI Features
-1. **AI Brainstorming (Project Generation)**: Automatically generates an initial project backlog based on a simple project idea.
-2. **Auto-Refine Backlog**: The AI analyzes the backlog, estimates task complexity (Story Points), and assigns priorities dynamically.
-3. **Generate Acceptance Criteria**: Instantly writes BDD-formatted (Given-When-Then) acceptance criteria for any draft task.
-4. **Decompose Story**: Breaks down complex User Stories into smaller, actionable technical sub-tasks.
-5. **Code Generation**: Acts as a developer to write functional code snippets for specific tasks.
-6. **AI Review Workflow (PO Review)**: The AI acts as a strict Product Owner, generating a testing checklist. It automatically moves the task to "Done" if it passes, or fails it back to "WIP" with detailed feedback.
-7. **Automated Status Reports**: Analyzes the entire Kanban board and generates a professional markdown report highlighting progress and bottlenecks.
+### 🏗 Architecture
+- **Backend:** PHP 8+ with lightweight custom routing (`Application.php`). Uses SQLite for zero-configuration persistent storage.
+- **Frontend:** Vue.js 3 with Vite, styled with Tailwind CSS and DaisyUI components.
+- **AI Integration:** Google Gemini API (`gemini-2.0-flash` / `gemini-1.5-pro` configurable via environment variables).
+- **Version Control:** Direct integration with GitHub API for seamless code committing.
 
 ---
 
-## 🚀 How to Set Up (Step-by-Step)
+## 🚀 Key AI Features in Detail
 
-### 1. Prepare Environment
-* **Web Server:** On Windows, install [WAMP](https://www.wampserver.com/).
-* **Project Files:** Place the project folder into your server's public directory (e.g., `C:\wamp64\www\TAIPO`).
-* **Frontend:** The frontend is built with Vue 3. Run `npm install` and `npm run dev` in the `frontend` folder.
+The system is packed with 7 major AI capabilities that guide a project from an idea to production-ready code:
+
+### 1. 🧠 AI Brainstorming (Project Generation)
+When creating a new project, instead of manually writing tasks, you provide a simple prompt (e.g., *"An e-commerce website with a shopping cart and Stripe payment integration"*). The AI generates a complete initial project backlog, creating technical tasks with descriptive titles and inserting them directly into your Kanban board.
+
+### 2. 🪄 Auto-Refine Backlog (Estimation & Priority)
+A traditional Product Owner spends hours estimating tasks and ordering the backlog. 
+- By clicking the **Auto-Refine** button in the Sprint Backlog column, the AI reads all pending tasks.
+- It calculates complexity in **Story Points** (e.g., 3 SP, 5 SP) and prepends them to the task description.
+- It evaluates importance and automatically applies priority flags (Low, Medium, High) to the cards.
+
+### 3. 📝 Generate Acceptance Criteria
+If a team member drops a bare-bones task into the board (e.g., "Add login page"), the AI can instantly generate detailed, BDD-formatted (**Given-When-Then**) acceptance criteria with a single click from the card's menu.
+
+### 4. ✂️ Decompose Story
+Large User Stories can bottleneck a Sprint. If a task is too complex, the **Decompose** action allows the AI to break it down into 3-5 smaller, actionable technical sub-tasks, replacing the original epic.
+
+### 5. 💻 Code Generation (Developer Role)
+TAIPO doesn't just manage tasks; it executes them. 
+- By selecting **Generate Code**, the AI writes functional code (e.g., Java, PHP, Python) based on the task's title, description, and acceptance criteria.
+- The generated code is displayed in a built-in code editor modal for human review.
+
+### 6. 🤖 AI Review Workflow (PO QA & Validation)
+Before a task is considered "Done", it must be verified. 
+- When a task is moved to the **REVIEW (WIP: 2)** column, the user can trigger an **AI Review**.
+- The AI analyzes the task and generates a strict testing checklist.
+- If the criteria are met, it passes the task and automatically moves it to **DONE**.
+- If it fails, the AI moves the card back to the **IMPLEMENTATION** column and appends detailed failure reasons to the description.
+
+### 7. 📊 Automated Status Reports
+Reporting is a tedious management task. By clicking the **Report** button, the AI analyzes the entire Kanban board (reading all columns, tasks, and bottlenecks) and generates a professional executive summary in Markdown format for stakeholders.
+
+---
+
+## 🗂 Managing the Workflow & WIP Limits
+
+The board is divided into strict Agile stages to optimize flow and prevent multitasking:
+
+1. **SPRINT BACKLOG (No Limit)** - Unstarted tasks waiting to be pulled.
+2. **IMPLEMENTATION (WIP: 3)** - Active development. The system physically prevents moving more than 3 tasks here.
+3. **TESTING (WIP: 2)** - Manual or automated QA.
+4. **REVIEW (WIP: 2)** - Code review and Product Owner validation.
+5. **DONE (No Limit)** - Completed and committed work.
+
+---
+
+## 🚀 Installation & Setup
+
+### 1. Environment Preparation
+* **Web Server:** Install a local server environment (e.g., [WAMP](https://www.wampserver.com/) for Windows, XAMPP, or Laravel Valet).
+* **Project Directory:** Clone this repository into your server's public document root (e.g., `C:\wamp64\www\TAIPO`).
+* **Frontend Setup:** Open a terminal in the `frontend` folder and run:
+  ```bash
+  npm install
+  npm run dev
+  ```
+  *(This starts the Vite development server).*
 
 ### 2. Obtain API Keys
-* **Google Gemini API:** Visit [Google AI Studio](https://aistudio.google.com/) and click **"Get API Key"**.
-* **GitHub PAT:** Go to your GitHub **Settings** > **Developer Settings** > **Personal Access Tokens**. Generate a new token with the `repo` scope to enable auto-committing.
+* **Google Gemini API:** Visit [Google AI Studio](https://aistudio.google.com/) to generate a free API key.
+* **GitHub PAT:** Go to GitHub **Settings** > **Developer Settings** > **Personal Access Tokens**. Generate a token with the `repo` scope to enable the app's auto-commit feature.
 
-### 3. Configuration
-Copy the `.env.example` file to `.env` inside the `backend` directory.
+### 3. Backend Configuration
+Copy the `.env.example` file to `.env` inside the `backend` directory and populate your credentials:
+
 ```env
 GEMINI_API_KEY="your_google_gemini_api_key_here"
 GITHUB_USERNAME="your_github_username"
@@ -39,39 +92,19 @@ GITHUB_REPO="your_github_repository_name"
 GITHUB_TOKEN="your_github_personal_access_token"
 ```
 
----
-
-## 🎮 How to Use the App
-
-### 🗂 Managing the Workflow
-The board is divided into strict Agile stages: **SPRINT BACKLOG**, **IMPLEMENTATION (WIP: 3)**, **TESTING (WIP: 2)**, **REVIEW (WIP: 2)**, and **DONE**. Columns have strict WIP limits to prevent bottlenecks.
-
-### 🪄 The AI Product Owner in Action
-Click the **(...)** menu on any task card to access AI capabilities:
-- **📝 Generate Acceptance Criteria**: Add professional criteria to your task.
-- **✂️ Decompose**: Split the task into smaller sub-tasks.
-- **💻 Generate Code**: Let the AI write the implementation.
-- **🤖 Ask AI to Review**: Only available in the REVIEW column. The AI validates the code and decides if the task is DONE or if it needs to go back to IMPLEMENTATION.
-
-### 📊 Project Management
-- **🪄 Auto-Refine**: In the Sprint Backlog column, click this button to let the AI estimate story points and priorities for all tasks.
-- **📊 Report**: In the top navigation bar, click Report to get an executive summary of the current project state.
-
-### 🔗 Committing to GitHub
-In the code preview window, click the **GitHub icon** to automatically push the AI-generated or manually written code directly to your connected GitHub repository.
+The app will automatically create the `kanban.sqlite` database file on its first run. Ensure the backend folder has write permissions.
 
 ---
 
-## 🛠 Troubleshooting
+## 🔗 Committing Directly to GitHub
 
-* **Database Errors:** The app uses SQLite (`kanban.sqlite`). Ensure the backend folder has write permissions.
-* **GitHub 403 Forbidden:** Ensure your PAT has `repo` scope and is correctly configured in `.env`.
+TAIPO eliminates context switching. When you generate code via the AI, you can click the **GitHub icon** in the code editor window. The application uses the GitHub REST API to automatically commit and push the new file directly to the repository specified in your `.env` file, and instantly moves the Kanban card to **DONE**.
 
 ---
 
 ## 📝 Academic Background
 
-This project serves as a practical experiment and demonstration for the integration of Large Language Models into Agile methodologies, simulating the Product Owner role.
+This software project was developed as a practical experiment for a Scientific Students' Associations (TDK) paper and the Óbuda University Mini Symposium. It investigates the feasibility and efficiency of integrating Large Language Models into Agile project management methodologies, specifically focusing on simulating the roles of a Product Owner and Agile Coach.
 
 * **Author:** Judit Szabó *(Software Engineering Student)*  
 * **Contributor:** Mihály Nyilas *(Software Engineering Student)*  
