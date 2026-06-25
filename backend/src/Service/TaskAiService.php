@@ -279,7 +279,8 @@ class TaskAiService
         $prompt = "You are TAIPO, an intelligent coding assistant. You are working on the project described below.\n\n" .
                   $contextSummary . "\n\n" .
                   "TASK TO IMPLEMENT: '{$finalDescription}'\n\n" .
-                  "Please generate a **complete, but very concise** solution (code). The code should be **functional**, but only include the necessary imports and logic. Do not generate long explanatory comments or introduction text! Use a single Markdown code block (```language ... ```). If the language is not specified, infer it from the context or use a popular one suitable for the task.";
+                  "Please generate a **complete, but very concise** solution (code). The code should be **functional**, but only include the necessary imports and logic. Do not generate long explanatory comments or introduction text! Use a single Markdown code block (```language ... ```).\n\n" .
+                  "CRITICAL: If the task title or description mentions a specific programming language (e.g., PHP, Java, Python), you MUST write the code in that language. Otherwise, default to the language that makes the most sense for this project.";
 
         $rawText = $this->geminiService->askTaipo($prompt);
         $rawText = trim($rawText);
@@ -548,11 +549,12 @@ class TaskAiService
         $context = $this->getProjectContextInfo($projectName);
         $this->geminiService->setContext($userId, $context['team_id'] ?? null);
 
-        $prompt = "You are an automated Product Owner. Generate detailed Acceptance Criteria in BDD format (Given-When-Then) for the following task.
-        Task Title: " . $task['title'] . "
-        Current Description: " . $task['description'] . "
+        $prompt = "You are a software developer. Your task is to write code for the following task in {$projectName}.
+        Task Title: {$task['title']}
+        Task Description: {$task['description']}
         
-        Provide ONLY the Acceptance Criteria formatted in Markdown.";
+        Write ONLY the required code without any markdown formatting or explanation. Do not use code blocks. The code should be complete and functional.
+        CRITICAL: If the task title or description mentions a specific programming language (e.g., PHP, Java, Python), you MUST write the code in that language. Otherwise, default to the language that makes the most sense for this project.";
 
         $criteria = $this->geminiService->askTaipo($prompt);
         
