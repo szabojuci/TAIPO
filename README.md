@@ -1,37 +1,37 @@
-# 🤖 AI-Driven Kanban Board
+# 🤖 TAIPO - The AI Product Owner (Kanban Board)
 
-An intelligent, web-based **Agile Project Management Tool** that integrates **Generative AI** with modern DevOps workflows. This system not only visualizes tasks but also automates project planning and source code generation, with direct deployment to GitHub.
+An intelligent, web-based **Agile Project Management Tool** that integrates **Generative AI** (Google Gemini) into the core of modern Agile workflows. This system not only visualizes tasks but acts as a virtual **Product Owner and Developer**, automating planning, refinement, coding, and code-review processes.
 
 ---
 
 ## 🌟 Overview
 
-The **AI-Driven Kanban Board** is designed to enhance software development efficiency. By leveraging the **Google Gemini API**, it can brainstorm entire project backlogs and write Java code for specific tasks. It enforces Agile discipline through **Work In Progress (WIP) limits** and streamlines the version control process via **GitHub API** integration.
+The **TAIPO (The AI Product Owner)** system is designed to simulate a complete software development lifecycle enhanced by AI. It enforces Agile discipline through **Work In Progress (WIP) limits** and takes over repetitive management and development tasks using the **Google Gemini API**.
+
+### 🚀 Key AI Features
+1. **AI Brainstorming (Project Generation)**: Automatically generates an initial project backlog based on a simple project idea.
+2. **Auto-Refine Backlog**: The AI analyzes the backlog, estimates task complexity (Story Points), and assigns priorities dynamically.
+3. **Generate Acceptance Criteria**: Instantly writes BDD-formatted (Given-When-Then) acceptance criteria for any draft task.
+4. **Decompose Story**: Breaks down complex User Stories into smaller, actionable technical sub-tasks.
+5. **Code Generation**: Acts as a developer to write functional code snippets for specific tasks.
+6. **AI Review Workflow (PO Review)**: The AI acts as a strict Product Owner, generating a testing checklist. It automatically moves the task to "Done" if it passes, or fails it back to "WIP" with detailed feedback.
+7. **Automated Status Reports**: Analyzes the entire Kanban board and generates a professional markdown report highlighting progress and bottlenecks.
 
 ---
 
 ## 🚀 How to Set Up (Step-by-Step)
 
-For detailed API usage, please refer to the [Developer API Documentation](API_DOCUMENTATION.md).
-
 ### 1. Prepare Environment
-
-* **Web Server:** on Windows, install [WAMP](https://www.wampserver.com/).
-* **Project Files:** Place the project folder into your server's public directory (e.g., `C:\wamp64\www\[project_name]`).
-  * why WAMP? because it's free and easy to use, and it's the only one I know of that works on Windows with PHP 8.5 at the time of writing (2026-02-05).
-  * for updates visit [WAMP aviatechno](https://wampserver.aviatechno.net/) website.
+* **Web Server:** On Windows, install [WAMP](https://www.wampserver.com/).
+* **Project Files:** Place the project folder into your server's public directory (e.g., `C:\wamp64\www\TAIPO`).
+* **Frontend:** The frontend is built with Vue 3. Run `npm install` and `npm run dev` in the `frontend` folder.
 
 ### 2. Obtain API Keys
-
 * **Google Gemini API:** Visit [Google AI Studio](https://aistudio.google.com/) and click **"Get API Key"**.
-  * to see which models are available, visit [Gemini API Models](https://ai.google.dev/gemini-api/docs/models)
-* **GitHub Personal Access Token (PAT):** - Go to your GitHub **Settings** > **Developer Settings** > **Personal Access Tokens** > **Tokens (classic)**.
-  * Generate a new token with the `repo` scope enabled.
+* **GitHub PAT:** Go to your GitHub **Settings** > **Developer Settings** > **Personal Access Tokens**. Generate a new token with the `repo` scope to enable auto-committing.
 
 ### 3. Configuration
-
-Copy the `.env.example` file to `.env`. This file is located in the `backend` directory. Fill in the following:
-
+Copy the `.env.example` file to `.env` inside the `backend` directory.
 ```env
 GEMINI_API_KEY="your_google_gemini_api_key_here"
 GITHUB_USERNAME="your_github_username"
@@ -39,118 +39,41 @@ GITHUB_REPO="your_github_repository_name"
 GITHUB_TOKEN="your_github_personal_access_token"
 ```
 
-You can change your `GEMINI_FALLBACK_MODEL` to another model if you want to use a different model. I gave you two models, one is commented out.  
-At the moment `GEMINI_BASE_URL` and `GEMINI_FALLBACK_URL` are the same, but they can be different. I just prepared it for future use in case of changes in the API.  
-**TAIPO** settings are optional, but recommended for better performance. In case of missing or incorrect settings, the app will use default values which are built-in (see [Config.php](backend/src/Config.php)).
-
-### 3.1 About the API costs
-
-It is set to the current costs of the models (2026-02-25). I gave you the link also to check the costs of the models (in case of changes in the pricing, or you need another model). Links are in the `.env.example` file (on the top).
-
-`*._MODEL_PROMPT_COST_PER_MILLION` is the cost of the prompt (input) per million tokens.  
-`*._MODEL_CANDIDATE_COST_PER_MILLION` is the cost of the response (output) per million tokens.
-
-### 3.2 MIN_USERNAME_LENGTH and MIN_PASSWORD_LENGTH
-
-These values are set to the current minimum lengths of the username and password.  
-Default values are 6 and 8, but built-in values are 3 and 6.  
-`MIN_USERNAME_LENGTH` is the minimum length of the username.  
-`MIN_PASSWORD_LENGTH` is the minimum length of the password.  
-Maximum lengths of the username and password are built-in, and those are: 16 and 31.
-
 ---
 
-### 4. 🎮 How to Use the App
+## 🎮 How to Use the App
 
-The application follows a streamlined workflow to take you from a project idea to committed source code.
+### 🗂 Managing the Workflow
+The board is divided into strict Agile stages: **SPRINT BACKLOG**, **IMPLEMENTATION (WIP: 3)**, **TESTING (WIP: 2)**, **REVIEW (WIP: 2)**, and **DONE**. Columns have strict WIP limits to prevent bottlenecks.
 
----
+### 🪄 The AI Product Owner in Action
+Click the **(...)** menu on any task card to access AI capabilities:
+- **📝 Generate Acceptance Criteria**: Add professional criteria to your task.
+- **✂️ Decompose**: Split the task into smaller sub-tasks.
+- **💻 Generate Code**: Let the AI write the implementation.
+- **🤖 Ask AI to Review**: Only available in the REVIEW column. The AI validates the code and decides if the task is DONE or if it needs to go back to IMPLEMENTATION.
 
-### 5. 🚀 Project Generation (AI Brainstorming)
+### 📊 Project Management
+- **🪄 Auto-Refine**: In the Sprint Backlog column, click this button to let the AI estimate story points and priorities for all tasks.
+- **📊 Report**: In the top navigation bar, click Report to get an executive summary of the current project state.
 
-1. Click the **Menu (☰)** icon in the top-left corner.  
-2. **Input**: Enter a project name (e.g., *"E-commerce Mobile App"*).  
-3. **AI Instruction**: You can customize the prompt, or use the default one to generate development tasks.  
-4. Click **"Generate with AI"**.  
-
-**Result:**  
-The Gemini AI processes your request and populates the **Sprint Backlog** with approximately 10 technical tasks tailored to your project.
-
----
-
-### 6. 🗂 Managing the Workflow (Kanban & WIP)
-
-The board is divided into **5 stages**. You can move tasks by dragging them.
-
-### 7. WIP Limits
-
-To prevent multitasking and bottlenecks, columns like **Implementation** and **Testing** have **Work In Progress (WIP)** limits.
-
-### 8. Enforcement
-
-If you try to move a task into a full column, the system blocks the move, encouraging you to finish pending tasks first.
-
----
-
-### 9. 🤖 Solving Tasks with AI
-
-When you are ready to implement a feature:
-
-1. Click the **three dots (...)** on the task card.  
-2. Select **"Generate Code"**.  
-
-**AI Logic:**  
-The system sends the task description to **Gemini**, which returns a functional **Java code snippet**.
-
----
-
-### 10. 🔗 Committing to GitHub (The "Done" State)
-
-The final step is integrating your code into your repository:
-
-1. In the code preview window, click the **GitHub icon**.  
-2. The app sends a **PUT request** to the GitHub API.  
-
-**Success:**  
-The code is saved as a new `.java` file in your repository.
-
-**Automation:**  
-Once the commit is successful, the app automatically moves the task to the **DONE** column.
-
----
-
-### 11. 🌙 UI / UX Features
-
-* **Dark Mode** - Toggle between themes using the **Moon/Sun (🌙 / ☀️)** icon  
-* **Importance Tagging** - Click the proper **Star (![Empty](assets/star-empty.svg))** to mark the priority of a task  
-  * **(![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg))** NO priority
-  * **(![Low](assets/star-yellow.svg)![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg))** LOW priority
-  * **(![Low](assets/star-yellow.svg)![Medium](assets/star-orange.svg)![Empty](assets/star-empty.svg))** MEDIUM priority
-  * **(![Low](assets/star-yellow.svg)![Medium](assets/star-orange.svg)![High](assets/star-red.svg))** HIGH priority
-* **Inline Editing** - Modify task descriptions directly on the board by selecting **"Edit"** from the task menu  
+### 🔗 Committing to GitHub
+In the code preview window, click the **GitHub icon** to automatically push the AI-generated or manually written code directly to your connected GitHub repository.
 
 ---
 
 ## 🛠 Troubleshooting
 
-### Database Errors
-
-The app creates `kanban.sqlite` automatically.  
-Make sure the folder has **write permissions**.
-
-### GitHub 403 Forbidden
-
-Ensure your **PAT** has `repo` scope and your `.env` configuration is correct.
-
-### AI Format Errors
-
-If the AI does not return tasks in the correct format, try refreshing the prompt in the side menu.
+* **Database Errors:** The app uses SQLite (`kanban.sqlite`). Ensure the backend folder has write permissions.
+* **GitHub 403 Forbidden:** Ensure your PAT has `repo` scope and is correctly configured in `.env`.
 
 ---
 
 ## 📝 Academic Background
 
+This project serves as a practical experiment and demonstration for the integration of Large Language Models into Agile methodologies, simulating the Product Owner role.
+
 * **Author:** Judit Szabó *(Software Engineering Student)*  
-* **Contributor:** Mihaly Nyilas *(Software Engineering Student)*  
+* **Contributor:** Mihály Nyilas *(Software Engineering Student)*  
 * **Supervisor:** Dr. Gábor Kusper  
 * **Institution:** Eszterházy Károly Catholic University  
