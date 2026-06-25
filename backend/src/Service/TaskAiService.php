@@ -380,14 +380,16 @@ class TaskAiService
         $context = $this->getProjectContextInfo($projectName);
         $this->geminiService->setContext($userId, $context['team_id'] ?? null);
 
-        $prompt = "You are an automated Product Owner reviewing a task that is in the 'REVIEW' column.
-        Task Title: " . $task['title'] . "
-        Task Description & Acceptance Criteria: " . $task['description'] . "
+        $codeBlock = empty($task['generated_code']) ? "\n\nNo code was provided for this task." : "\n\nGenerated Code to Review:\n" . $task['generated_code'];
 
-        Please analyze this task.
-        1. Generate a short bullet-point test checklist based on the Acceptance Criteria.
-        2. Give your final decision: either [PASS] if it looks conceptually complete and has good criteria, or [FAIL] if it seems incomplete, lacks criteria, or is a buggy scenario.
-        (Since you cannot see the actual code, just simulate a rigorous review. You can randomly fail it sometimes or base it on how detailed the description is).
+        $prompt = "You are an automated Product Owner and Code Reviewer evaluating a task that is in the 'REVIEW' column.
+        Task Title: " . $task['title'] . "
+        Task Description & Acceptance Criteria: " . $task['description'] . 
+        $codeBlock . "
+
+        Please analyze the provided code against the Acceptance Criteria and Task Description.
+        1. Generate a short bullet-point test checklist based on the Acceptance Criteria, and evaluate if the code fulfills them.
+        2. Give your final decision: either [PASS] if the code is correct, complete, and meets the criteria, or [FAIL] if the code is missing, incorrect, buggy, or does not meet the criteria.
         
         Format your response EXACTLY like this:
         **AI PO Review Checklist:**
