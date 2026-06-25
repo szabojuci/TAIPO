@@ -513,11 +513,16 @@ class TaskAiService
             }
 
             if ($originalTask) {
-                $spText = "**Becslés:** " . $est['story_points'] . " SP\n\n";
+                $spText = "**Estimate:** " . $est['story_points'] . " SP\n\n";
                 // Only prepend if not already prepended
                 $newDesc = $originalTask['description'];
-                if (strpos($newDesc, "**Becslés:**") === false) {
-                    $newDesc = $spText . $newDesc;
+                if (strpos($newDesc, "**Estimate:**") === false) {
+                    // Check if old "Becslés" is there and replace it, otherwise prepend
+                    if (strpos($newDesc, "**Becslés:**") !== false) {
+                        $newDesc = str_replace("**Becslés:**", "**Estimate:**", $newDesc);
+                    } else {
+                        $newDesc = $spText . $newDesc;
+                    }
                 }
 
                 $this->taskService->updateTask($est['id'], $originalTask['title'], $newDesc, $originalTask['updated_at'] ?? null, $userId ?? 0, $isInstructor);
