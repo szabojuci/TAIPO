@@ -26,6 +26,12 @@
                 >
                     Add Task
                 </button>
+                <button
+                    @click="$emit('refine-backlog')"
+                    class="w-full mt-2 bg-secondary text-secondary-content py-2 px-4 rounded hover:bg-secondary-focus transition duration-300 flex items-center justify-center gap-2"
+                >
+                    🪄 Auto-Refine
+                </button>
             </div>
 
             <!-- Task List (Draggable) -->
@@ -46,7 +52,9 @@
                         @task-updated="$emit('task-updated')"
                         @decompose="$emit('decompose', element)"
                         @generate-code="$emit('generate-code', element)"
+                        @generate-ac="$emit('generate-ac', element)"
                         @query-task="$emit('query-task', element)"
+                        @ai-review="$emit('ai-review', element)"
                         @request-edit="openEditTaskModal(element)"
                         @request-view="openViewTaskModal(element)"
                     />

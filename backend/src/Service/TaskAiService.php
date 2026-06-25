@@ -363,4 +363,203 @@ class TaskAiService
         ];
         return $statusMap[$rawStatus] ?? TaskService::STATUS_SPRINT_BACKLOG;
     }
+
+    public function aiReviewTask(int $taskId, ?int $userId = null, bool $isInstructor = false): array
+    {
+        $task = $this->taskService->getTaskById($taskId);
+        if (!$task) {
+            throw new TaskNotFoundException("Task not found");
+        }
+
+        $projectName = $task['project_name'];
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $prompt = "You are an automated Product Owner reviewing a task that is in the 'REVIEW' column.
+        Task Title: " . $task['title'] . "
+        Task Description & Acceptance Criteria: " . $task['description'] . "
+
+        Please analyze this task.
+        1. Generate a short bullet-point test checklist based on the Acceptance Criteria.
+        2. Give your final decision: either [PASS] if it looks conceptually complete and has good criteria, or [FAIL] if it seems incomplete, lacks criteria, or is a buggy scenario.
+        (Since you cannot see the actual code, just simulate a rigorous review. You can randomly fail it sometimes or base it on how detailed the description is).
+        
+        Format your response EXACTLY like this:
+        **AI PO Review Checklist:**
+        - [ ] ...
+        - [ ] ...
+        
+        **Decision:** [PASS] or [FAIL]
+        
+        **Feedback:** (Your brief reasoning)";
+
+        $reviewResult = $this->geminiService->askTaipo($prompt);
+        
+        $decision = 'PASS';
+        if (str_contains($reviewResult, '[FAIL]')) {
+            $decision = 'FAIL';
+        }
+
+        $newDescription = $task['description'] . "\n\n---\n" . $reviewResult;
+        
+        $newStatus = ($decision === 'PASS') ? 'DONE' : 'IMPLEMENTATION WIP:3';
+
+        $this->taskService->updateStatus($taskId, $newStatus, $projectName, $userId ?? 0, $isInstructor);
+        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+
+        return [
+            'status' => $newStatus,
+            'decision' => $decision,
+            'review_notes' => $reviewResult
+        ];
+    }
+
+    public function generateProjectReport(string $projectName, ?int $userId = null, bool $isInstructor = false): string
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $tasks = $this->taskService->getTasksByProject($projectName, $userId ?? 0, $isInstructor);
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $taskSummary = "Project: $projectName\n\n";
+        foreach ($tasks as $task) {
+            $taskSummary .= "- [{$task['status']}] {$task['title']} (Priority: {$task['is_important']})\n";
+        }
+
+        $prompt = "You are an automated Product Owner. Generate a professional status report for the project management team based on the following tasks.
+        $taskSummary
+        
+        Please provide:
+        1. A brief executive summary.
+        2. Progress overview (what's done, what's in progress, what's left).
+        3. Potential bottlenecks or risks based on the current board state.
+        
+        Format the response in Markdown.";
+
+        return $this->geminiService->askTaipo($prompt);
+    }
+
+    public function refineBacklog(string $projectName, ?int $userId = null, bool $isInstructor = false): int
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $tasks = $this->taskService->getTasksByProject($projectName, $userId ?? 0, $isInstructor);
+        
+        $backlogTasks = array_filter($tasks, function($t) {
+            return $t['status'] === TaskService::STATUS_SPRINT_BACKLOG;
+        });
+
+        if (empty($backlogTasks)) {
+            return 0;
+        }
+
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $taskDataForPrompt = [];
+        foreach ($backlogTasks as $t) {
+            $taskDataForPrompt[] = [
+                'id' => $t['id'],
+                'title' => $t['title'],
+                'description' => $t['description']
+            ];
+        }
+
+        $prompt = "You are an automated Product Owner. Please review the following tasks currently in the backlog.
+        Tasks: " . json_encode($taskDataForPrompt) . "
+        
+        For each task, estimate its complexity in Story Points (e.g., 1, 2, 3, 5, 8) and assign a priority from 1 (Low), 2 (Medium), to 3 (High).
+        
+        Return ONLY a JSON array with no markdown formatting. Example format:
+        [
+            {\"id\": 10, \"priority\": 2, \"story_points\": 3},
+            {\"id\": 12, \"priority\": 3, \"story_points\": 5}
+        ]";
+
+        $response = $this->geminiService->askTaipo($prompt);
+        
+        // Clean up markdown block if the model included it
+        $response = preg_replace('/```json\s*/', '', $response);
+        $response = preg_replace('/```\s*/', '', $response);
+
+        $estimations = json_decode(trim($response), true);
+        if (!is_array($estimations)) {
+            throw new Exception("Failed to parse AI estimation response.");
+        }
+
+        $refinedCount = 0;
+        foreach ($estimations as $est) {
+            if (!isset($est['id'], $est['priority'], $est['story_points'])) {
+                continue;
+            }
+            
+            // Find original task to append SP to description
+            $originalTask = null;
+            foreach ($backlogTasks as $bt) {
+                if ($bt['id'] == $est['id']) {
+                    $originalTask = $bt;
+                    break;
+                }
+            }
+
+            if ($originalTask) {
+                $spText = "**Becslés:** " . $est['story_points'] . " SP\n\n";
+                // Only prepend if not already prepended
+                $newDesc = $originalTask['description'];
+                if (strpos($newDesc, "**Becslés:**") === false) {
+                    $newDesc = $spText . $newDesc;
+                }
+
+                $this->taskService->updateTask($est['id'], $originalTask['title'], $newDesc, $originalTask['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+                
+                // Update priority (is_important)
+                $prefix = Config::getTablePrefix();
+                $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET is_important = :is_important WHERE id = :id");
+                $stmt->execute([':is_important' => $est['priority'], ':id' => $est['id']]);
+                
+                $refinedCount++;
+            }
+        }
+
+        return $refinedCount;
+    }
+
+    public function generateAcceptanceCriteria(int $taskId, ?int $userId = null, bool $isInstructor = false): string
+    {
+        $task = $this->taskService->getTaskById($taskId);
+        if (!$task) {
+            throw new TaskNotFoundException("Task not found");
+        }
+
+        $projectName = $task['project_name'];
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $prompt = "You are an automated Product Owner. Generate detailed Acceptance Criteria in BDD format (Given-When-Then) for the following task.
+        Task Title: " . $task['title'] . "
+        Current Description: " . $task['description'] . "
+        
+        Provide ONLY the Acceptance Criteria formatted in Markdown.";
+
+        $criteria = $this->geminiService->askTaipo($prompt);
+        
+        $newDescription = $task['description'] . "\n\n### Acceptance Criteria\n" . $criteria;
+        
+        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+
+        return $newDescription;
+    }
 }

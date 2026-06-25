@@ -44,6 +44,8 @@ class Application
 
     public function run()
     {
+        $this->initEnvAndInput();
+
         // Allow CORS with safety checks
         $allowedOrigins = explode(',', $_ENV['ALLOWED_ORIGINS'] ?? getenv('ALLOWED_ORIGINS') ?: '');
         $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
@@ -54,8 +56,9 @@ class Application
             // For now, let's just echo back the origin if it matches.
             header("Access-Control-Allow-Origin: $origin");
         }
-        header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
         header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+        header("Access-Control-Allow-Credentials: true");
 
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
             http_response_code(200);
@@ -73,7 +76,6 @@ class Application
         ]);
         session_start();
 
-        $this->initEnvAndInput();
         $this->enforceHttps();
 
 
@@ -125,7 +127,8 @@ class Application
         $taskActions = [
             'add_task', 'delete_task', 'toggle_importance', 'update_status',
             'reorder_tasks', 'edit_task', 'generate_code', 'generate_project_tasks',
-            'decompose_task', 'commit_to_github', 'query_task', 'create_project_from_spec'
+            'decompose_task', 'commit_to_github', 'query_task', 'create_project_from_spec', 'ai_review_task',
+            'generate_project_report', 'refine_backlog', 'generate_acceptance_criteria'
         ];
         if (in_array($action, $taskActions)) {
             $this->handleTaskAction($action);
@@ -447,6 +450,18 @@ class Application
                 break;
             case 'create_project_from_spec':
                 $this->taskController->handleCreateFromSpec();
+                break;
+            case 'ai_review_task':
+                $this->taskController->handleAiReviewTask();
+                break;
+            case 'generate_project_report':
+                $this->taskController->handleGenerateProjectReport();
+                break;
+            case 'refine_backlog':
+                $this->taskController->handleRefineBacklog();
+                break;
+            case 'generate_acceptance_criteria':
+                $this->taskController->handleGenerateAcceptanceCriteria();
                 break;
             default:
                 break;

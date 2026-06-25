@@ -13,7 +13,7 @@ use App\Prompts;
 class ProjectController
 {
     private ProjectService $projectService;
- 
+
     public function __construct(ProjectService $projectService)
     {
         $this->projectService = $projectService;

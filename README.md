@@ -121,13 +121,13 @@ Once the commit is successful, the app automatically moves the task to the **DON
 
 ### 11. 🌙 UI / UX Features
 
-* **Dark Mode** – Toggle between themes using the **Moon/Sun (🌙 / ☀️)** icon  
-* **Importance Tagging** – Click the proper **Star (![Empty](assets/star-empty.svg))** to mark the priority of a task  
+* **Dark Mode** - Toggle between themes using the **Moon/Sun (🌙 / ☀️)** icon  
+* **Importance Tagging** - Click the proper **Star (![Empty](assets/star-empty.svg))** to mark the priority of a task  
   * **(![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg))** NO priority
   * **(![Low](assets/star-yellow.svg)![Empty](assets/star-empty.svg)![Empty](assets/star-empty.svg))** LOW priority
   * **(![Low](assets/star-yellow.svg)![Medium](assets/star-orange.svg)![Empty](assets/star-empty.svg))** MEDIUM priority
   * **(![Low](assets/star-yellow.svg)![Medium](assets/star-orange.svg)![High](assets/star-red.svg))** HIGH priority
-* **Inline Editing** – Modify task descriptions directly on the board by selecting **"Edit"** from the task menu  
+* **Inline Editing** - Modify task descriptions directly on the board by selecting **"Edit"** from the task menu  
 
 ---
 

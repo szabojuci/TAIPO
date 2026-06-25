@@ -1,26 +1,20 @@
 <template>
-    <div
-        :data-theme="theme"
-        class="min-h-screen bg-base-200"
-    >
+    <div :data-theme="theme" class="min-h-screen bg-base-200">
 
-        <ProjectSidebar
-            v-if="isAuthenticated"
-            v-model="drawerOpen"
-            @project-selected="handleProjectSelected"
-            @open-github-modal="showGithubModal = true"
-        />
+        <ProjectSidebar v-if="isAuthenticated" v-model="drawerOpen" @project-selected="handleProjectSelected"
+            @open-github-modal="showGithubModal = true" />
 
         <div v-if="isAuthenticated" class="drawer-content flex flex-col">
             <!-- Navbar -->
             <div class="navbar bg-base-100 shadow-md mb-8">
                 <div class="flex-none">
-                    <button
-                        @click="drawerOpen = !drawerOpen"
-                        aria-label="Toggle Menu"
-                        class="btn btn-square btn-ghost drawer-button"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="inline-block w-5 h-5 stroke-current"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    <button @click="drawerOpen = !drawerOpen" aria-label="Toggle Menu"
+                        class="btn btn-square btn-ghost drawer-button">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                            class="inline-block w-5 h-5 stroke-current">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
                     </button>
                 </div>
                 <!-- Brand -->
@@ -33,30 +27,25 @@
 
                 <!-- API Costs Button -->
                 <div class="flex-none ml-2 hidden sm:flex">
-                    <button
-                        @click="isApiCostModalOpen = true"
-                        class="btn btn-outline btn-sm btn-info gap-2"
-                        title="API Costs"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <button @click="isApiCostModalOpen = true" class="btn btn-outline btn-sm btn-info gap-2"
+                        title="API Costs">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                         API Costs
                     </button>
                 </div>
 
                 <!-- Teams Modal Button -->
-                <div
-                    v-if="authUser?.is_instructor"
-                    class="flex-none ml-2 hidden sm:flex"
-                >
-                    <button
-                        @click="isTeamModalOpen = true"
-                        class="btn btn-outline btn-sm btn-secondary gap-2"
-                        title="Manage Teams"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                <div v-if="authUser?.is_instructor" class="flex-none ml-2 hidden sm:flex">
+                    <button @click="isTeamModalOpen = true" class="btn btn-outline btn-sm btn-secondary gap-2"
+                        title="Manage Teams">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-4 h-4">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
                         </svg>
                         Teams
                     </button>
@@ -64,30 +53,30 @@
 
                 <!-- Spacer & Centered Project Name -->
                 <div class="flex-1 flex justify-center">
-                    <span
-                        v-if="currentProject"
-                        class="badge badge-lg badge-primary font-bold"
-                    >
+                    <span v-if="currentProject" class="badge badge-lg badge-primary font-bold">
                         {{ currentProject }}
                     </span>
-                    <span
-                        v-else
-                        class="text-sm opacity-50"
-                    >
+                    <span v-else class="text-sm opacity-50">
                         Select a project
                     </span>
                 </div>
 
+                <!-- Generate Report Button -->
+                <div class="flex-none mr-2">
+                    <button v-if="currentProject" @click="handleGenerateReport"
+                        class="btn btn-outline btn-sm btn-success gap-2" title="Generate Project Report">
+                        📊 Report
+                    </button>
+                </div>
+
                 <!-- Requirements Button -->
                 <div class="flex-none mr-2">
-                    <button
-                        v-if="currentProject"
-                        @click="isRequirementModalOpen = true"
-                        class="btn btn-ghost btn-circle"
-                        title="Project Requirements"
-                    >
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    <button v-if="currentProject" @click="isRequirementModalOpen = true"
+                        class="btn btn-ghost btn-circle" title="Project Requirements">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                            stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round"
+                                d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                         </svg>
                     </button>
                 </div>
@@ -101,11 +90,7 @@
 
                 <!-- Logout Button -->
                 <div class="flex-none mr-2">
-                    <button
-                        @click="handleLogout"
-                        class="btn btn-ghost text-error"
-                        title="Logout"
-                    >
+                    <button @click="handleLogout" class="btn btn-ghost text-error" title="Logout">
                         Logout
                     </button>
                 </div>
@@ -113,137 +98,90 @@
                 <!-- Theme Toggle -->
                 <div class="flex-none">
                     <label class="swap swap-rotate btn btn-ghost btn-circle">
-                        <input
-                            @change="toggleTheme"
-                            :checked="theme === 'dark'"
-                            type="checkbox"
-                        >
+                        <input @change="toggleTheme" :checked="theme === 'dark'" type="checkbox">
 
                         <!-- sun icon (show in dark mode) -->
-                        <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,4.93,1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z"/></svg>
+                        <svg class="swap-on fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M5.64,17l-.71.71a1,1,0,0,0,0,1.41,1,1,0,0,0,1.41,0l.71-.71A1,1,0,0,0,5.64,17ZM5,12a1,1,0,0,0-1-1H3a1,1,0,0,0,0,2H4A1,1,0,0,0,5,12Zm7-7a1,1,0,0,0,1-1V3a1,1,0,0,0-2,0V4A1,1,0,0,0,12,5ZM5.64,7.05a1,1,0,0,0,.7.29,1,1,0,0,0,.71-.29,1,1,0,0,0,0-1.41l-.71-.71A1,1,0,0,0,4.93,4.93,1,1,0,0,0,4.93,6.34Zm12,.29a1,1,0,0,0,.7-.29l.71-.71a1,1,0,1,0-1.41-1.41L17,5.64a1,1,0,0,0,0,1.41A1,1,0,0,0,17.66,7.34ZM21,11H20a1,1,0,0,0,0,2h1a1,1,0,0,0,0-2Zm-9,8a1,1,0,0,0-1,1v1a1,1,0,0,0,2,0V20A1,1,0,0,0,12,19ZM18.36,17A1,1,0,0,0,17,18.36l.71.71a1,1,0,0,0,1.41,0,1,1,0,0,0,0-1.41ZM12,6.5A5.5,5.5,0,1,0,17.5,12,5.51,5.51,0,0,0,12,6.5Zm0,9A3.5,3.5,0,1,1,15.5,12,3.5,3.5,0,0,1,12,15.5Z" />
+                        </svg>
 
                         <!-- moon icon (show in light mode) -->
-                        <svg class="swap-off fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z"/></svg>
+                        <svg class="swap-off fill-current w-6 h-6" xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24">
+                            <path
+                                d="M21.64,13a1,1,0,0,0-1.05-.14,8.05,8.05,0,0,1-3.37.73A8.15,8.15,0,0,1,9.08,5.49a8.59,8.59,0,0,1,.25-2A1,1,0,0,0,8,2.36,10.14,10.14,0,1,0,22,14.05,1,1,0,0,0,21.64,13Zm-9.5,6.69A8.14,8.14,0,0,1,7.08,5.22v.27A10.15,10.15,0,0,0,17.22,15.63a9.79,9.79,0,0,0,2.1-.22A8.11,8.11,0,0,1,12.14,19.73Z" />
+                        </svg>
                     </label>
                 </div>
             </div>
 
             <!-- Main Content -->
             <main class="container mx-auto">
-                <div
-                    v-if="loading"
-                    class="flex justify-center p-10"
-                >
+                <div v-if="loading" class="flex justify-center p-10">
                     <span class="loading loading-spinner loading-lg text-primary"></span>
                 </div>
 
-                <div
-                    v-else-if="error"
-                    role="alert"
-                    class="alert alert-error"
-                >
-                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <div v-else-if="error" role="alert" class="alert alert-error">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
                     <span>Error: {{ error }}</span>
                 </div>
 
-                <KanbanBoard
-                    v-else-if="currentProject"
-                    :columns="columns"
-                    :tasks="tasks"
-                    :current-project="currentProject"
-                    :max-title-length="appConfig.maxTitleLength"
-                    :max-description-length="appConfig.maxDescriptionLength"
-                    @task-updated="refreshTasks"
-                    @task-deleted="refreshTasks"
-                    @task-added="refreshTasks"
-                    @decompose="handleDecompose"
-                    @generate-code="handleGenerateCode"
-                    @query-task="handleQueryTask"
-                    @show-notification="showNotification"
-                />
+                <KanbanBoard v-else-if="currentProject" :columns="columns" :tasks="tasks"
+                    :current-project="currentProject" :max-title-length="appConfig.maxTitleLength"
+                    :max-description-length="appConfig.maxDescriptionLength" @task-updated="refreshTasks"
+                    @task-deleted="refreshTasks" @task-added="refreshTasks" @decompose="handleDecompose"
+                    @generate-code="handleGenerateCode" @generate-ac="handleGenerateAc" @query-task="handleQueryTask" @ai-review="handleAiReview"
+                    @refine-backlog="handleRefineBacklog" @show-notification="showNotification" />
 
             </main>
         </div>
 
-        <CodeGenerationModal
-            :is-open="isCodeModalOpen"
-            :loading="codeLoading"
-            :code="generatedCode"
-            :error="codeError"
-            @close="isCodeModalOpen = false"
-            @regenerate="handleRegenerateCode"
-        />
+        <CodeGenerationModal :is-open="isCodeModalOpen" :code="generatedCode" :task="currentTaskForCode"
+            :loading="codeLoading" :error="codeError" @close="isCodeModalOpen = false"
+            @regenerate="handleRegenerateCode" @task-updated="refreshTasks"/>
 
-        <TaskQueryModal
-            :is-open="isQueryModalOpen"
-            :loading="queryLoading"
-            :answer="queryAnswer"
-            :error="queryError"
-            :max-query-length="appConfig.maxQueryLength"
-            @close="isQueryModalOpen = false"
-            @submit="handleQueryTaskSubmit"
-        />
+        <TaskQueryModal :is-open="isQueryModalOpen" :loading="queryLoading" :answer="queryAnswer" :error="queryError"
+            :max-query-length="appConfig.maxQueryLength" @close="isQueryModalOpen = false"
+            @submit="handleQueryTaskSubmit" />
 
-        <RequirementModal
-            :is-open="isRequirementModalOpen"
-            :project-name="currentProject"
-            @close="isRequirementModalOpen = false"
-        />
+        <ReportModal :is-open="isReportModalOpen" :report="reportContent" :loading="reportLoading"
+            :error="reportError" @close="isReportModalOpen = false" />
 
-        <ApiCostModal
-            :is-open="isApiCostModalOpen"
-            @close="isApiCostModalOpen = false"
-        />
+        <RequirementModal :is-open="isRequirementModalOpen" :project-name="currentProject"
+            @close="isRequirementModalOpen = false" />
 
-        <TeamModal
-            :is-open="isTeamModalOpen"
-            @close="isTeamModalOpen = false"
-        />
+        <ApiCostModal :is-open="isApiCostModalOpen" @close="isApiCostModalOpen = false" />
+
+        <TeamModal :is-open="isTeamModalOpen" @close="isTeamModalOpen = false" />
 
         <!-- Global Toast Notification -->
-        <div
-            v-if="notification"
-            class="toast toast-top toast-end z-50 font-bold"
-        >
-            <div
-                :class="`alert alert-${notification.type}`"
-            >
+        <div v-if="notification" class="toast toast-top toast-end z-50 font-bold">
+            <div :class="`alert alert-${notification.type}`">
                 <span>{{ notification.message }}</span>
-                <div
-                    v-if="notification.details"
-                    class="text-xs opacity-80 mt-1 whitespace-pre-wrap"
-                >
+                <div v-if="notification.details" class="text-xs opacity-80 mt-1 whitespace-pre-wrap">
                     {{ notification.details }}
                 </div>
             </div>
         </div>
 
         <!-- Login View (Shown when not authenticated) -->
-        <LoginView
-            v-if="!isAuthenticated"
-            :config="appConfig"
-            @auth-success="handleAuthSuccess"
-            @open-privacy-modal="isPrivacyModalOpen = true"
-        />
+        <LoginView v-if="!isAuthenticated" :config="appConfig" @auth-success="handleAuthSuccess"
+            @open-privacy-modal="isPrivacyModalOpen = true" />
 
-        <CookieBanner
-            v-if="!isPrivacyModalOpen"
-            @open-privacy-modal="isPrivacyModalOpen = true"
-        />
+        <CookieBanner v-if="!isPrivacyModalOpen" @open-privacy-modal="isPrivacyModalOpen = true" />
 
-        <PrivacyModal
-            :is-open="isPrivacyModalOpen"
-            @close="isPrivacyModalOpen = false"
-        />
+        <PrivacyModal :is-open="isPrivacyModalOpen" @close="isPrivacyModalOpen = false" />
 
-        <ConfirmationModal
-            :is-open="isDecomposeConfirmOpen"
-            :message="`Are you sure you want to break down '${taskToDecompose?.description}' into smaller sub-tasks?` "
-            @confirm="proceedDecompose"
-            @close="isDecomposeConfirmOpen = false"
-            confirm-text="Decompose"
-            title="Decompose Task?"
-        />
+        <ConfirmationModal :is-open="isDecomposeConfirmOpen"
+            :message="`Are you sure you want to break down '${taskToDecompose?.description}' into smaller sub-tasks?`"
+            @confirm="proceedDecompose" @close="isDecomposeConfirmOpen = false" confirm-text="Decompose"
+            title="Decompose Task?" />
     </div>
 </template>
 
@@ -253,6 +191,7 @@ import KanbanBoard from './components/KanbanBoard.vue';
 import ProjectSidebar from './components/ProjectSidebar.vue';
 import CodeGenerationModal from './components/modals/CodeGenerationModal.vue';
 import TaskQueryModal from './components/modals/TaskQueryModal.vue';
+import ReportModal from './components/modals/ReportModal.vue';
 import ApiCostModal from './components/modals/ApiCostModal.vue';
 import RequirementModal from './components/RequirementModal.vue';
 import PrivacyModal from './components/modals/PrivacyModal.vue';
@@ -307,6 +246,12 @@ const isRequirementModalOpen = ref(false);
 const isApiCostModalOpen = ref(false);
 const isPrivacyModalOpen = ref(false);
 const isTeamModalOpen = ref(false);
+
+// Report State
+const isReportModalOpen = ref(false);
+const reportContent = ref('');
+const reportLoading = ref(false);
+const reportError = ref('');
 
 // Decomposition Confirmation State
 const isDecomposeConfirmOpen = ref(false);
@@ -500,6 +445,84 @@ const proceedDecompose = async () => {
         loading.value = false;
         isDecomposeConfirmOpen.value = false;
         taskToDecompose.value = null;
+    }
+};
+
+const handleAiReview = async (task) => {
+    loading.value = true;
+    try {
+        const response = await api.aiReviewTask(task.id);
+        if (response.success) {
+            const decision = response.result.decision;
+            if (decision === 'PASS') {
+                showNotification("AI Review Passed! Task moved to Done.", "success");
+            } else {
+                showNotification("AI Review Failed. Task returned to WIP. Check details in the description.", "warning");
+            }
+            await refreshTasks();
+        }
+    } catch (e) {
+        showNotification("Failed to review task: " + (e.response?.data?.error || e.message), "error");
+    } finally {
+        loading.value = false;
+    }
+};
+
+const handleGenerateReport = async () => {
+    if (!currentProject.value) return;
+    
+    isReportModalOpen.value = true;
+    reportLoading.value = true;
+    reportContent.value = '';
+    reportError.value = '';
+
+    try {
+        const res = await api.generateProjectReport(currentProject.value);
+        if (res.success && res.report) {
+            reportContent.value = res.report;
+        } else {
+            reportError.value = res.error || "Failed to generate report.";
+        }
+    } catch (e) {
+        reportError.value = e.response?.data?.error || e.message;
+    } finally {
+        reportLoading.value = false;
+    }
+};
+
+const handleRefineBacklog = async () => {
+    if (!currentProject.value) return;
+
+    loading.value = true;
+    try {
+        const res = await api.refineBacklog(currentProject.value);
+        if (res.success) {
+            showNotification(`Backlog refined! ${res.refinedCount} tasks updated with priorities and story points.`, "success");
+            await refreshTasks();
+        } else {
+            showNotification("Failed to refine backlog: " + res.error, "error");
+        }
+    } catch (e) {
+        showNotification("Failed to refine backlog: " + (e.response?.data?.error || e.message), "error");
+    } finally {
+        loading.value = false;
+    }
+};
+
+const handleGenerateAc = async (task) => {
+    loading.value = true;
+    try {
+        const res = await api.generateAcceptanceCriteria(task.id);
+        if (res.success) {
+            showNotification("Acceptance Criteria generated successfully!", "success");
+            await refreshTasks();
+        } else {
+            showNotification("Failed to generate criteria: " + res.error, "error");
+        }
+    } catch (e) {
+        showNotification("Failed to generate criteria: " + (e.response?.data?.error || e.message), "error");
+    } finally {
+        loading.value = false;
     }
 };
 

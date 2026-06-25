@@ -99,10 +99,27 @@
                         </li>
                         <li>
                             <button
+                                @click.prevent="$emit('generate-ac', task)"
+                                type="button"
+                            >
+                                📝 Generate Acceptance Criteria
+                            </button>
+                        </li>
+                        <li>
+                            <button
                                 @click.prevent="$emit('query-task', task)"
                                 type="button"
                             >
                                 ❓ Ask AI
+                            </button>
+                        </li>
+                        <li v-if="task.status.includes('REVIEW')">
+                            <button
+                                @click.prevent="$emit('ai-review', task)"
+                                type="button"
+                                class="text-primary font-semibold"
+                            >
+                                🤖 Ask AI to Review
                             </button>
                         </li>
                         <li>

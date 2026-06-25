@@ -135,6 +135,38 @@ export const api = {
         });
     },
 
+    async aiReviewTask(taskId) {
+        const response = await client.post('/', {
+            action: 'ai_review_task',
+            id: taskId
+        });
+        return response.data;
+    },
+
+    async generateProjectReport(projectName) {
+        const response = await client.post('/', {
+            action: 'generate_project_report',
+            project_name: projectName
+        });
+        return response.data;
+    },
+
+    async refineBacklog(projectName) {
+        const response = await client.post('/', {
+            action: 'refine_backlog',
+            project_name: projectName
+        });
+        return response.data;
+    },
+
+    async generateAcceptanceCriteria(taskId) {
+        const response = await client.post('/', {
+            action: 'generate_acceptance_criteria',
+            id: taskId
+        });
+        return response.data;
+    },
+
     async createProject(name, teamId = null) {
         return client.post('/', {
             action: 'create_project',

@@ -403,4 +403,114 @@ class TaskController
             echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
+
+    public function handleAiReviewTask()
+    {
+        $taskId = (int)($_POST['id'] ?? 0);
+        if (!$taskId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Task ID is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $result = $this->taskAiService->aiReviewTask($taskId, $userId, $isInstructor);
+
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'result' => $result]);
+        } catch (TaskNotFoundException $e) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => "Task not found."]);
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => "Unauthorized to modify this project."]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Error during AI Review: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleGenerateProjectReport()
+    {
+        $projectName = strip_tags(trim($_POST['project_name'] ?? ''));
+        if (empty($projectName)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Project name is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $report = $this->taskAiService->generateProjectReport($projectName, $userId, $isInstructor);
+
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'report' => $report]);
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => "Unauthorized."]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Error generating report: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleRefineBacklog()
+    {
+        $projectName = strip_tags(trim($_POST['project_name'] ?? ''));
+        if (empty($projectName)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Project name is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $result = $this->taskAiService->refineBacklog($projectName, $userId, $isInstructor);
+
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'refinedCount' => $result]);
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => "Unauthorized."]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Error refining backlog: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleGenerateAcceptanceCriteria()
+    {
+        $taskId = (int)($_POST['id'] ?? 0);
+        if (!$taskId) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Task ID is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $newDescription = $this->taskAiService->generateAcceptanceCriteria($taskId, $userId, $isInstructor);
+
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'description' => $newDescription]);
+        } catch (TaskNotFoundException $e) {
+            http_response_code(404);
+            echo json_encode(['success' => false, 'error' => "Task not found."]);
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => "Unauthorized."]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Error generating criteria: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
 }
