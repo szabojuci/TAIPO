@@ -549,12 +549,11 @@ class TaskAiService
         $context = $this->getProjectContextInfo($projectName);
         $this->geminiService->setContext($userId, $context['team_id'] ?? null);
 
-        $prompt = "You are a software developer. Your task is to write code for the following task in {$projectName}.
-        Task Title: {$task['title']}
-        Task Description: {$task['description']}
+        $prompt = "You are an automated Product Owner. Generate detailed Acceptance Criteria in BDD format (Given-When-Then) for the following task.
+        Task Title: " . $task['title'] . "
+        Current Description: " . $task['description'] . "
         
-        Write ONLY the required code without any markdown formatting or explanation. Do not use code blocks. The code should be complete and functional.
-        CRITICAL: If the task title or description mentions a specific programming language (e.g., PHP, Java, Python), you MUST write the code in that language. Otherwise, default to the language that makes the most sense for this project.";
+        Provide ONLY the Acceptance Criteria formatted in Markdown.";
 
         $criteria = $this->geminiService->askTaipo($prompt);
         
