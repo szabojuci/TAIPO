@@ -13,6 +13,13 @@ const client = axios.create({
     withCredentials: true // Important for sending/receiving session cookies
 });
 
+// Add request interceptor to attach language globally
+client.interceptors.request.use((config) => {
+    const lang = globalThis?.localStorage?.getItem('taipo_language') || 'auto';
+    config.headers['X-Taipo-Language'] = lang;
+    return config;
+});
+
 // Add a response interceptor to handle global 401s
 client.interceptors.response.use(
     (response) => response,
@@ -39,14 +46,15 @@ export const api = {
         return response.data;
     },
 
-    async addTask(project, title, description, priority = 0) {
+    async addTask(project, title, description, priority = 0, type = 'feature') {
         // PHP expects POST form-data or JSON with specific structure.
         return client.post('/', {
             action: 'add_task',
             current_project: project,
             title: title,
             description: description,
-            is_important: priority
+            is_important: priority,
+            type: type
         });
     },
 
@@ -90,12 +98,13 @@ export const api = {
         return response.data;
     },
 
-    async editTask(taskId, title, description, lastUpdatedAt = null) {
+    async editTask(taskId, title, description, type, lastUpdatedAt = null) {
         return client.post('/', {
             action: 'edit_task',
             task_id: taskId,
             title: title,
             description: description,
+            type: type,
             last_updated_at: lastUpdatedAt
         });
     },
@@ -212,11 +221,12 @@ export const api = {
         });
     },
 
-    async queryTask(taskId, query) {
+    async queryTask(taskId, query, persona = 'mentor') {
         const response = await client.post('/', {
             action: 'query_task',
             task_id: taskId,
-            query: query
+            query: query,
+            persona: persona
         });
         return response.data;
     },
@@ -275,6 +285,11 @@ export const api = {
     // Team Management
     async listTeams() {
         const response = await client.get('/?action=list_teams');
+        return response.data;
+    },
+
+    async listUserTeams() {
+        const response = await client.get('/?action=list_user_teams');
         return response.data;
     },
 
@@ -346,6 +361,27 @@ export const api = {
             action: 'set_project_team',
             id: projectId,
             team_id: teamId
+        });
+        return response.data;
+    },
+
+    async generateStandup(projectName) {
+        const response = await client.post('/', {
+            action: 'generate_standup',
+            project_name: projectName
+        });
+        return response.data;
+    },
+
+    async exportProject(projectName) {
+        // Trigger file download directly by opening the URL
+        window.location.href = `http://localhost:8000/?action=export_project&project_name=${encodeURIComponent(projectName)}`;
+    },
+
+    async translateProject(projectName) {
+        const response = await client.post('/', {
+            action: 'translate_project',
+            project_name: projectName
         });
         return response.data;
     }

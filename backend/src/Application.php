@@ -57,7 +57,7 @@ class Application
             header("Access-Control-Allow-Origin: $origin");
         }
         header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
-        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+        header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With, X-Taipo-Language");
         header("Access-Control-Allow-Credentials: true");
 
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -128,7 +128,7 @@ class Application
             'add_task', 'delete_task', 'toggle_importance', 'update_status',
             'reorder_tasks', 'edit_task', 'generate_code', 'generate_project_tasks',
             'decompose_task', 'commit_to_github', 'query_task', 'create_project_from_spec', 'ai_review_task',
-            'generate_project_report', 'refine_backlog', 'generate_acceptance_criteria'
+            'generate_project_report', 'refine_backlog', 'generate_acceptance_criteria', 'generate_standup', 'export_project', 'translate_project'
         ];
         if (in_array($action, $taskActions)) {
             $this->handleTaskAction($action);
@@ -462,6 +462,15 @@ class Application
                 break;
             case 'generate_acceptance_criteria':
                 $this->taskController->handleGenerateAcceptanceCriteria();
+                break;
+            case 'generate_standup':
+                $this->taskController->handleGenerateStandup();
+                break;
+            case 'export_project':
+                $this->taskController->handleExportProject();
+                break;
+            case 'translate_project':
+                $this->taskController->handleTranslateProject();
                 break;
             default:
                 break;

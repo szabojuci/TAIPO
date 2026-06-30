@@ -14,10 +14,20 @@
                     <span class="w-1.5 h-6 bg-primary rounded-full"></span>
                     {{ isReadOnly ? 'View Task' : (isEditMode ? 'Edit Task' : 'Add New Task') }}
                 </h3>
-                <div
-                    @mouseleave="hoverPriority = 0"
-                    class="flex items-center gap-1.5 bg-base-200 p-1.5 rounded-xl border border-base-300 shadow-inner"
-                >
+                <div class="flex items-center gap-3">
+                    <select 
+                        v-model="type" 
+                        :disabled="isReadOnly"
+                        class="select select-sm select-bordered w-32 focus:outline-none focus:ring-2 focus:ring-primary/50 bg-base-200"
+                    >
+                        <option value="feature">✨ Feature</option>
+                        <option value="bug">🐛 Bug</option>
+                    </select>
+                    
+                    <div
+                        @mouseleave="hoverPriority = 0"
+                        class="flex items-center gap-1.5 bg-base-200 p-1.5 rounded-xl border border-base-300 shadow-inner"
+                    >
                     <button
                         v-for="i in 3"
                         :key="i"
@@ -52,6 +62,7 @@
                             />
                         </svg>
                     </button>
+                    </div>
                 </div>
             </div>
 
@@ -202,6 +213,7 @@ const isEditMode = computed(() => !!props.task);
 const emit = defineEmits(["close", "save"]);
 
 const priority = ref(0);
+const type = ref("feature");
 const hoverPriority = ref(0);
 const title = ref("");
 const description = ref("");
@@ -223,11 +235,13 @@ watch(
                 // If title was auto-generated from description before migration, it might be messy, but assuming clean state.
                 description.value = props.task.description || '';
                 priority.value = Number(props.task.is_important) || 0;
+                type.value = props.task.type || 'feature';
             } else {
                 // Add mode
                 title.value = "";
                 description.value = "";
                 priority.value = 0;
+                type.value = 'feature';
             }
             hoverPriority.value = 0;
             nextTick(() => {
@@ -255,6 +269,6 @@ const setPriority = (p) => {
 const save = () => {
     if (!title.value) return;
 
-    emit("save", { title: title.value, description: description.value, priority: priority.value });
+    emit("save", { title: title.value, description: description.value, priority: priority.value, type: type.value });
 };
 </script>

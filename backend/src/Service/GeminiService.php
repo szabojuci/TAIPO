@@ -29,18 +29,28 @@ class GeminiService
         $this->currentTeamId = $teamId;
     }
 
-    public function askTaipo(string $prompt): string
+    public function askTaipo(string $prompt, ?string $mimeType = null): string
     {
+        $lang = $_SERVER['HTTP_X_TAIPO_LANGUAGE'] ?? 'auto';
+        $langInstruction = "";
+        if ($lang === 'hu') {
+            $langInstruction = "CRITICAL INSTRUCTION: You MUST ALWAYS answer in Hungarian (Magyarul válaszolj), regardless of the input language!\n\n";
+        } elseif ($lang === 'en') {
+            $langInstruction = "CRITICAL INSTRUCTION: You MUST ALWAYS answer in English, regardless of the input language!\n\n";
+        }
+
+        $finalPrompt = $langInstruction . $prompt;
+
         $url = GeminiConfig::getGeminiFullUrl();
-        $data = $this->buildRequestPayload($prompt);
+        $data = $this->buildRequestPayload($finalPrompt, $mimeType);
         $response = $this->makeRequest($url, $data);
 
         return $this->processResponse($response);
     }
 
-    private function buildRequestPayload(string $prompt): array
+    private function buildRequestPayload(string $prompt, ?string $mimeType = null): array
     {
-        return [
+        $payload = [
             'contents' => [
                 [
                     'parts' => [
@@ -55,6 +65,12 @@ class GeminiService
                 'maxOutputTokens' => GeminiConfig::getGeminiMaxOutputTokens(),
             ]
         ];
+
+        if ($mimeType !== null) {
+            $payload['generationConfig']['responseMimeType'] = $mimeType;
+        }
+
+        return $payload;
     }
 
     private function processResponse(array $response): string

@@ -41,6 +41,22 @@
                                 required
                             >
                         </div>
+                        
+                        <div class="form-control w-full" v-if="userTeams.length > 0">
+                            <label class="label font-bold" for="teamSelect">
+                                <span class="label-text">Assign to Team (Optional)</span>
+                            </label>
+                            <select
+                                v-model="selectedTeamId"
+                                id="teamSelect"
+                                class="select select-bordered w-full"
+                            >
+                                <option :value="null">-- No Team (Personal Project) --</option>
+                                <option v-for="team in userTeams" :key="team.id" :value="team.id">
+                                    {{ team.name }}
+                                </option>
+                            </select>
+                        </div>
 
                         <div class="form-control w-full">
                             <div class="flex justify-between items-center mb-2">
@@ -201,6 +217,19 @@
                             placeholder="New Name"
                         >
 
+                        <label class="label" for="settingsTeamSelect" v-if="userTeams.length > 0">Assign to Team</label>
+                        <select
+                            v-if="userTeams.length > 0"
+                            v-model="selectedProjectTeamId"
+                            id="settingsTeamSelect"
+                            class="select select-bordered w-full mb-4"
+                        >
+                            <option :value="null">-- No Team (Personal Project) --</option>
+                            <option v-for="team in userTeams" :key="team.id" :value="team.id">
+                                {{ team.name }}
+                            </option>
+                        </select>
+
                         <div class="divider">DANGER ZONE</div>
                         <button
                             @click="openDeleteConfirm"
@@ -297,6 +326,18 @@ const loading = ref(false); // for generation
 const loadingProjects = ref(false);
 const projectLoadError = ref(null);
 
+const userTeams = ref([]);
+const selectedTeamId = ref(null);
+const selectedProjectTeamId = ref(null);
+
+const fetchUserTeams = async () => {
+    try {
+        userTeams.value = await api.listUserTeams();
+    } catch (e) {
+        console.error("Failed to load user teams", e);
+    }
+};
+
 // Rename state
 const isRenameModalOpen = ref(false);
 const renameName = ref("");
@@ -332,7 +373,7 @@ const loadDefaultPrompt = (language) => {
 
     let promptText = languagePrompts.value[language] || "";
     if (promptText) {
-        prompt.value = promptText.replace(
+        prompt.value = promptText.replaceAll(
             "{{PROJECT_NAME}}",
             projectName.value,
         );
@@ -348,7 +389,7 @@ const handleFileUpload = async (event) => {
         if (!text.trim()) return;
 
         loading.value = true;
-        const res = await api.createProjectFromSpec(text, null);
+        const res = await api.createProjectFromSpec(text, selectedTeamId.value);
         if (res.success) {
             await fetchProjects();
             if (res.projectName) {
@@ -370,7 +411,7 @@ const handleGenerate = async () => {
     if (!projectName.value || !prompt.value) return;
     loading.value = true;
     try {
-        await api.generateTasks(projectName.value, prompt.value, null);
+        await api.generateTasks(projectName.value, prompt.value, selectedTeamId.value);
         // Assuming generation automatically sets it as current or we trigger a reload
         // Refetch to get ID
         await fetchProjects();
@@ -391,7 +432,7 @@ const handleCreateEmpty = async () => {
     if (!projectName.value) return;
     loading.value = true;
     try {
-        await api.createProject(projectName.value, null);
+        await api.createProject(projectName.value, selectedTeamId.value);
         await fetchProjects();
         selectProjectByName(projectName.value);
         drawerOpen.value = false;
@@ -405,6 +446,7 @@ const handleCreateEmpty = async () => {
 const openRenameModal = async () => {
     if (selectedProject.value) {
         renameName.value = selectedProject.value.name;
+        selectedProjectTeamId.value = selectedProject.value.team_id || null;
         isRenameModalOpen.value = true;
     }
 };
@@ -414,10 +456,18 @@ const handleRename = async () => {
     try {
         await api.renameProject(selectedProject.value.id, renameName.value);
         
+        if (selectedProjectTeamId.value !== selectedProject.value.team_id) {
+            await api.setProjectTeam(selectedProject.value.id, selectedProjectTeamId.value);
+            selectedProject.value.team_id = selectedProjectTeamId.value;
+        }
+        
         // Optimization: update local state immediately
         selectedProject.value.name = renameName.value;
         const p = projects.value.find((p) => p.id === selectedProject.value.id);
-        if (p) p.name = renameName.value;
+        if (p) {
+            p.name = renameName.value;
+            p.team_id = selectedProjectTeamId.value;
+        }
 
         isRenameModalOpen.value = false;
 
@@ -546,5 +596,6 @@ onMounted(async () => {
         console.error("Failed to load project defaults", e);
     }
     fetchProjects();
+    fetchUserTeams();
 });
 </script>

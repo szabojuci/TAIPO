@@ -61,10 +61,40 @@
                     </span>
                 </div>
 
-                <!-- Generate Report Button -->
-                <div class="flex-none mr-2">
-                    <button v-if="currentProject" @click="handleGenerateReport"
-                        class="btn btn-outline btn-sm btn-success gap-2" title="Generate Project Report">
+                <!-- Project Actions Group -->
+                <div v-if="currentProject" class="flex-none flex items-center gap-3 mr-4 pr-4 border-r border-base-300">
+                    <button 
+                        @click="handleTranslateBoard" 
+                        class="btn btn-sm btn-ghost gap-2" 
+                        title="Translate Board to Selected Language"
+                        :disabled="translateLoading">
+                        <span v-if="translateLoading" class="loading loading-spinner loading-xs"></span>
+                        <span v-else>🌐</span>
+                        Translate
+                    </button>
+                    
+                    <select v-model="selectedLanguage" class="select select-sm select-bordered bg-base-200 w-32" title="AI Output Language">
+                        <option value="auto">🌍 Auto</option>
+                        <option value="en">🇬🇧 English</option>
+                        <option value="hu">🇭🇺 Magyar</option>
+                    </select>
+
+                    <select v-model="selectedPersona" class="select select-sm select-bordered bg-base-200 w-40" title="AI Product Owner Persona">
+                        <option value="mentor">🎓 Mentor PO</option>
+                        <option value="strict">👔 Strict PO</option>
+                        <option value="ceo">🚀 Startup CEO</option>
+                    </select>
+
+                    <button @click="handleGenerateStandup" class="btn btn-outline btn-sm btn-info gap-2" title="Daily Standup">
+                        <span v-if="standupLoading" class="loading loading-spinner loading-xs"></span>
+                        <span v-else>☕</span> Standup
+                    </button>
+
+                    <button @click="handleExportProject" class="btn btn-outline btn-sm btn-warning gap-2" title="Export Project to ZIP">
+                        📦 Export
+                    </button>
+
+                    <button @click="handleGenerateReport" class="btn btn-outline btn-sm btn-success gap-2" title="Generate Project Report">
                         📊 Report
                     </button>
                 </div>
@@ -149,7 +179,7 @@
             :loading="codeLoading" :error="codeError" @close="isCodeModalOpen = false"
             @regenerate="handleRegenerateCode" @task-updated="refreshTasks"/>
 
-        <TaskQueryModal :is-open="isQueryModalOpen" :loading="queryLoading" :answer="queryAnswer" :error="queryError"
+        <TaskQueryModal :is-open="isQueryModalOpen" :loading="queryLoading" :task="queryTaskTarget" :answer="queryAnswer" :error="queryError"
             :max-query-length="appConfig.maxQueryLength" @close="isQueryModalOpen = false"
             @submit="handleQueryTaskSubmit" />
 
@@ -185,6 +215,8 @@
             :message="`Are you sure you want to break down '${taskToDecompose?.description}' into smaller sub-tasks?`"
             @confirm="proceedDecompose" @close="isDecomposeConfirmOpen = false" confirm-text="Decompose"
             title="Decompose Task?" />
+
+        <StandupModal :is-open="isStandupModalOpen" :content="standupContent" @close="isStandupModalOpen = false" />
     </div>
 </template>
 
@@ -202,6 +234,7 @@ import TeamModal from './components/modals/TeamModal.vue';
 import LoginView from './components/LoginView.vue';
 import CookieBanner from './components/CookieBanner.vue';
 import ConfirmationModal from './components/modals/ConfirmationModal.vue';
+import StandupModal from './components/modals/StandupModal.vue';
 import { api } from './services/api';
 
 const isAuthenticated = ref(false);
@@ -219,6 +252,12 @@ const currentProject = ref(null);
 const showGithubModal = ref(false);
 const drawerOpen = ref(false);
 const theme = ref(globalThis?.localStorage?.getItem('theme') || 'dark');
+const selectedPersona = ref(globalThis?.localStorage?.getItem('taipo_persona') || 'mentor');
+const selectedLanguage = ref(globalThis?.localStorage?.getItem('taipo_language') || 'auto');
+
+const standupLoading = ref(false);
+const isStandupModalOpen = ref(false);
+const standupContent = ref('');
 
 const toggleTheme = () => {
     theme.value = theme.value === 'dark' ? 'cupcake' : 'dark';
@@ -229,6 +268,19 @@ const toggleTheme = () => {
         globalThis.document.documentElement.setAttribute('data-theme', theme.value);
     }
 };
+
+import { watch } from 'vue';
+watch(selectedPersona, (newVal) => {
+    if (globalThis?.localStorage) {
+        globalThis.localStorage.setItem('taipo_persona', newVal);
+    }
+});
+
+watch(selectedLanguage, (newVal) => {
+    if (globalThis?.localStorage) {
+        globalThis.localStorage.setItem('taipo_language', newVal);
+    }
+});
 
 // Code Modal State
 const isCodeModalOpen = ref(false);
@@ -281,6 +333,28 @@ const columns = ref({
 // Auto-Sprint State
 const isAutoSprintActive = ref(false);
 
+const translateLoading = ref(false);
+
+const handleTranslateBoard = async () => {
+    if (!currentProject.value) return;
+    
+    translateLoading.value = true;
+    try {
+        const response = await api.translateProject(currentProject.value);
+        if (response.success) {
+            showNotification(`Board translated successfully (${response.count} tasks updated)`, 'success');
+            await refreshTasks();
+        } else {
+            showNotification(response.error || 'Failed to translate board', 'error');
+        }
+    } catch (e) {
+        console.error("Translation error", e);
+        showNotification("An error occurred during translation", 'error');
+    } finally {
+        translateLoading.value = false;
+    }
+};
+
 const toggleAutoSprint = async () => {
     isAutoSprintActive.value = !isAutoSprintActive.value;
     if (isAutoSprintActive.value) {
@@ -314,8 +388,13 @@ const runAutoSprint = async () => {
         const testingTask = tasks.value['TESTING WIP:2']?.[0];
         if (testingTask && (tasks.value['REVIEW WIP:2']?.length || 0) < 2) {
             showNotification(`[Auto-Sprint] Moving task to REVIEW: ${testingTask.title}`);
-            await api.updateStatus(testingTask.id, 'REVIEW WIP:2', currentProject.value);
-            actionTaken = true;
+            try {
+                await api.updateStatus(testingTask.id, 'REVIEW WIP:2', currentProject.value);
+                actionTaken = true;
+            } catch (e) {
+                console.error("Auto-Sprint error moving task to REVIEW:", e);
+                break; // Break the loop on error
+            }
             await new Promise(r => setTimeout(r, 2000));
             continue;
         }
@@ -339,8 +418,13 @@ const runAutoSprint = async () => {
         const backlogTask = tasks.value['SPRINT BACKLOG']?.[0];
         if (backlogTask && (tasks.value['IMPLEMENTATION WIP:3']?.length || 0) < 3) {
             showNotification(`[Auto-Sprint] Pulling task into Sprint: ${backlogTask.title}`);
-            await api.updateStatus(backlogTask.id, 'IMPLEMENTATION WIP:3', currentProject.value);
-            actionTaken = true;
+            try {
+                await api.updateStatus(backlogTask.id, 'IMPLEMENTATION WIP:3', currentProject.value);
+                actionTaken = true;
+            } catch (e) {
+                console.error("Auto-Sprint error pulling task to Sprint:", e);
+                break; // Break the loop on error
+            }
             await new Promise(r => setTimeout(r, 2000));
             continue;
         }
@@ -529,8 +613,8 @@ const proceedDecompose = async () => {
 const handleAiReview = async (task) => {
     loading.value = true;
     try {
-        const response = await api.aiReviewTask(task.id);
-        if (response.success) {
+        const response = await api.aiReviewTask(task.id, currentProject.value, selectedPersona.value);
+        if (response && response.success) {
             const decision = response.result.decision;
             if (decision === 'PASS') {
                 showNotification("AI Review Passed! Task moved to Done.", "success");
@@ -664,10 +748,20 @@ const handleQueryTaskSubmit = async (query) => {
     queryError.value = '';
 
     try {
-        const res = await api.queryTask(queryTaskTarget.value.id, query);
+        const res = await api.queryTask(queryTaskTarget.value.id, query, selectedPersona.value);
         if (res.success && res.answer) {
             queryAnswer.value = res.answer;
             await refreshTasks();
+            if (queryTaskTarget.value) {
+                let updatedTask = null;
+                for (const column in tasks.value) {
+                    updatedTask = tasks.value[column].find(t => t.id === queryTaskTarget.value.id);
+                    if (updatedTask) break;
+                }
+                if (updatedTask) {
+                    queryTaskTarget.value = updatedTask;
+                }
+            }
         } else {
             queryError.value = res.error || "Failed to get an answer.";
         }
@@ -675,6 +769,34 @@ const handleQueryTaskSubmit = async (query) => {
         queryError.value = e.response?.data?.error || e.message;
     } finally {
         queryLoading.value = false;
+    }
+};
+
+const handleGenerateStandup = async () => {
+    if (!currentProject.value) return;
+    standupLoading.value = true;
+    standupContent.value = '';
+    isStandupModalOpen.value = true;
+    try {
+        const res = await api.generateStandup(currentProject.value);
+        if (res.success && res.standup) {
+            standupContent.value = res.standup;
+        } else {
+            standupContent.value = "Failed to generate standup: " + (res.error || "Unknown error");
+        }
+    } catch (e) {
+        standupContent.value = "Error generating standup: " + (e.response?.data?.error || e.message);
+    } finally {
+        standupLoading.value = false;
+    }
+};
+
+const handleExportProject = async () => {
+    if (!currentProject.value) return;
+    try {
+        await api.exportProject(currentProject.value);
+    } catch (e) {
+        showNotification("Failed to export project: " + (e.response?.data?.error || e.message), "error");
     }
 };
 </script>

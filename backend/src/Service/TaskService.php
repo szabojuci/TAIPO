@@ -17,6 +17,7 @@ class TaskService
     use ProjectAccessTrait;
 
     public const STATUS_SPRINT_BACKLOG = 'SPRINT BACKLOG';
+    public const STATUS_REVIEW = 'REVIEW WIP:2';
 
     private GeminiService $geminiService;
 
@@ -36,7 +37,7 @@ class TaskService
     public function getTaskById(int $taskId): ?array
     {
         $prefix = Config::getTablePrefix();
-        $stmt = $this->pdo->prepare("SELECT id, title, description, status, is_important, generated_code, is_subtask, po_comments, position, parent_id, project_name, updated_at FROM {$prefix}tasks WHERE id = :id");
+        $stmt = $this->pdo->prepare("SELECT id, title, description, status, is_important, generated_code, is_subtask, po_comments, position, parent_id, project_name, updated_at, type, mr_status, story_points FROM {$prefix}tasks WHERE id = :id");
         $stmt->execute([':id' => $taskId]);
         $task = $stmt->fetch(PDO::FETCH_ASSOC);
         return $task ?: null;
@@ -49,7 +50,7 @@ class TaskService
         }
 
         $prefix = Config::getTablePrefix();
-        $stmt = $this->pdo->prepare("SELECT id, title, description, status, is_important, generated_code, is_subtask, po_comments, position, parent_id, updated_at FROM {$prefix}tasks WHERE project_name = :projectName ORDER BY position ASC, id ASC");
+        $stmt = $this->pdo->prepare("SELECT id, title, description, status, is_important, generated_code, is_subtask, po_comments, position, parent_id, updated_at, type, mr_status, story_points FROM {$prefix}tasks WHERE project_name = :projectName ORDER BY position ASC, id ASC");
         $stmt->execute([':projectName' => $projectName]);
         $tasks = [];
         while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
@@ -90,19 +91,20 @@ class TaskService
         }
     }
 
-    public function addTask(string $projectName, string $title, string $description, int $isImportant = 0, int $userId = 0, bool $isInstructor = false): int
+    public function addTask(string $projectName, string $title, string $description, int $isImportant = 0, string $type = 'feature', int $userId = 0, bool $isInstructor = false): int
     {
         if (!$this->isAuthorized($projectName, $userId, $isInstructor)) {
             throw new ProjectUnauthorizedException($projectName);
         }
 
         $prefix = Config::getTablePrefix();
-        $stmt = $this->pdo->prepare("INSERT INTO {$prefix}tasks (project_name, title, description, status, is_important) VALUES (:project_name, :title, :description, '" . self::STATUS_SPRINT_BACKLOG . "', :is_important)");
+        $stmt = $this->pdo->prepare("INSERT INTO {$prefix}tasks (project_name, title, description, status, is_important, type) VALUES (:project_name, :title, :description, '" . self::STATUS_SPRINT_BACKLOG . "', :is_important, :type)");
         $stmt->execute([
             ':project_name' => $projectName,
             ':title' => $title,
             ':description' => $description,
-            ':is_important' => $isImportant
+            ':is_important' => $isImportant,
+            ':type' => $type
         ]);
         return (int) $this->pdo->lastInsertId();
     }
@@ -152,7 +154,7 @@ class TaskService
         return $stmt->rowCount();
     }
 
-    public function updateTask(int $taskId, string $title, string $description, ?string $lastUpdatedAt = null, int $userId = 0, bool $isInstructor = false): int
+    public function updateTask(int $taskId, string $title, string $description, string $type = 'feature', ?string $lastUpdatedAt = null, int $userId = 0, bool $isInstructor = false): int
     {
         $prefix = Config::getTablePrefix();
         $stmt = $this->pdo->prepare("SELECT project_name FROM {$prefix}tasks WHERE id = :id");
@@ -167,10 +169,11 @@ class TaskService
             throw new ProjectUnauthorizedException($projectName);
         }
 
-        $query = "UPDATE {$prefix}tasks SET title = :title, description = :description, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
+        $query = "UPDATE {$prefix}tasks SET title = :title, description = :description, type = :type, updated_at = CURRENT_TIMESTAMP WHERE id = :id";
         $params = [
             ':title' => $title,
             ':description' => $description,
+            ':type' => $type,
             ':id' => $taskId
         ];
 
@@ -207,7 +210,12 @@ class TaskService
         }
 
         $prefix = Config::getTablePrefix();
-        $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET status = :status WHERE id = :id AND project_name = :project_name");
+        if ($newStatus === self::STATUS_REVIEW) {
+            $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET status = :status, mr_status = 'opened' WHERE id = :id AND project_name = :project_name");
+        } else {
+            $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET status = :status WHERE id = :id AND project_name = :project_name");
+        }
+        
         $stmt->execute([
             ':status' => $newStatus,
             ':id' => $taskId,

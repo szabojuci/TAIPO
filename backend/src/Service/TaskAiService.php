@@ -8,6 +8,7 @@ use App\Service\GeminiService;
 use App\Service\ProjectAccessTrait;
 use App\Exception\TaskNotFoundException;
 use App\Exception\ProjectUnauthorizedException;
+use App\Exception\GeminiApiException;
 use App\Config;
 
 class TaskAiService
@@ -39,6 +40,7 @@ class TaskAiService
                     - Ensure each story provides clear, actionable value and is highly relevant to the project description.
                     - Make the stories atomic and testable. Avoid vague or overly broad tasks.
                     - Cover core functionalities first, ensuring a logical flow of dependency.
+                    - CRITICAL: If the user specified a certain number of tasks in their prompt, you MUST generate EXACTLY that many tasks! To ensure you do not lose count, you MUST number each line starting from 1. (e.g. '1. [SPRINTBACKLOG|2]: ...') and DO NOT STOP until you reach the requested number.
 
                     Each user story must follow the standard format: 'As a [user], I want to [action], so that [benefit]'.
                     Format each line as: [STATUS|PRIORITY]: [Short Title] | [User Story Text]
@@ -75,6 +77,7 @@ class TaskAiService
         - Ensure each story provides clear, actionable value and is strictly relevant to the provided specification.
         - Make each story atomic, testable, and sufficiently detailed. Do not create vague or overly broad tasks.
         - Ensure comprehensive coverage of the core features mentioned in the spec.
+        - CRITICAL: If the specification mentions a required number of tasks, you MUST generate EXACTLY that many tasks! To ensure you do not lose count, you MUST number each line starting from 1. (e.g. '1. [SPRINTBACKLOG|2]: ...') and DO NOT STOP until you reach the requested number.
 
         Each task must follow the format: 'As a [user], I want to [action], so that [benefit]'.
 
@@ -189,7 +192,7 @@ class TaskAiService
         return $count;
     }
 
-    public function queryTask(int $taskId, string $query, ?int $userId = null, bool $isInstructor = false): string
+    public function queryTask(int $taskId, string $query, string $persona = 'mentor', ?int $userId = null, bool $isInstructor = false): string
     {
         $prefix = Config::getTablePrefix();
         $stmt = $this->pdo->prepare("SELECT description, po_comments, project_name, status, title FROM {$prefix}tasks WHERE id = :id");
@@ -211,15 +214,22 @@ class TaskAiService
         $projectContext = $this->getProjectContextSummary($projectName, $taskId);
         $taskContext = $this->formatTaskContext($task);
 
-        $prompt = "You are TAIPO, an intelligent coding assistant for the project '{$projectName}'.\n\n" .
+        $personaInstruction = match ($persona) {
+            'strict' => "You are a STRICT and NO-NONSENSE Product Owner. You demand perfection, reject sloppy questions, and give concise, commanding answers.",
+            'ceo' => "You are a VISIONARY CEO. You focus on the big picture, business value, and market impact. You use buzzwords and motivate the developer.",
+            default => "You are a HELPFUL MENTOR and intelligent coding assistant. You are patient, explain things clearly, and provide code snippets if needed."
+        };
+
+        $prompt = "{$personaInstruction}\n\n" .
                   "Project Context (includes requirements and other tasks):\n{$projectContext}\n\n" .
                   "{$taskContext}\n\n" .
                   "User Question: {$query}\n\n" .
                   "Instructions:\n" .
                   "- Answer the user's question specifically related to the current task.\n" .
-                  "- Use the project context to understand dependencies, shared requirements, or overall goals, but focus on the specific task.\n" .
+                  "- Adopt your persona entirely. Do not break character.\n" .
                   "- Refrain from lengthy intros.\n" .
-                  "- Provide code snippets if asked.";
+                  "- Provide code snippets if asked.\n" .
+                  "- CRITICAL: Do NOT copy or repeat the context or question verbatim. Always use your own words to avoid recitation filters.";
 
         $answer = $this->geminiService->askTaipo($prompt);
         $this->persistQueryAnswer($taskId, $query, $answer, $task['po_comments'] ?? '');
@@ -336,9 +346,9 @@ class TaskAiService
         }
 
         $result = null;
-        if (preg_match('/^\[(SPRINTBACKLOG|IMPLEMENTATION|TESTING|REVIEW|DONE)(?:\|([0-3]))?\]:\s*(.*?)\s*\|\s*(.*)/iu', $line, $matches)) {
+        if (preg_match('/^(?:\d+\.\s*)?\[(SPRINTBACKLOG|IMPLEMENTATION|TESTING|REVIEW|DONE)(?:\|([0-3]))?\]:\s*(.*?)\s*\|\s*(.*)/iu', $line, $matches)) {
             $result = $this->formatTaskData($matches[3], $matches[4], $matches[1], $matches[2]);
-        } elseif (preg_match('/^\[(SPRINTBACKLOG|IMPLEMENTATION|TESTING|REVIEW|DONE)(?:\|([0-3]))?\]:\s*(.*)/iu', $line, $matches)) {
+        } elseif (preg_match('/^(?:\d+\.\s*)?\[(SPRINTBACKLOG|IMPLEMENTATION|TESTING|REVIEW|DONE)(?:\|([0-3]))?\]:\s*(.*)/iu', $line, $matches)) {
             $maxLen = Config::getMaxTitleLength();
             $title = substr($matches[3], 0, $maxLen) . (strlen($matches[3]) > $maxLen ? '...' : '');
             $result = $this->formatTaskData($title, $matches[3], $matches[1], $matches[2]);
@@ -368,7 +378,7 @@ class TaskAiService
         return $statusMap[$rawStatus] ?? TaskService::STATUS_SPRINT_BACKLOG;
     }
 
-    public function aiReviewTask(int $taskId, ?int $userId = null, bool $isInstructor = false): array
+    public function aiReviewTask(int $taskId, ?int $userId = null, bool $isInstructor = false, string $persona = 'mentor'): array
     {
         $task = $this->taskService->getTaskById($taskId);
         if (!$task) {
@@ -385,14 +395,21 @@ class TaskAiService
 
         $codeBlock = empty($task['generated_code']) ? "\n\nNo code was provided for this task." : "\n\nGenerated Code to Review:\n" . $task['generated_code'];
 
-        $prompt = "You are an automated Product Owner and Code Reviewer evaluating a task that is in the 'REVIEW' column.
+        $personaInstruction = "You are a helpful and constructive Mentor Product Owner. You provide encouraging feedback, explain concepts well, and accept minor imperfections if the core logic works.";
+        if ($persona === 'strict') {
+            $personaInstruction = "You are an extremely strict, senior Tech Lead Product Owner. You demand absolute perfection. You must find edge cases, security flaws, and reject the code [FAIL] if it is not 100% production-ready and perfectly matching the criteria.";
+        } else if ($persona === 'ceo') {
+            $personaInstruction = "You are a fast-moving Startup CEO Product Owner. You prioritize speed over perfect code. If the main feature seems to work and there are no critical blockers, immediately [PASS] it. Keep your feedback very short and business-focused.";
+        }
+
+        $prompt = $personaInstruction . "\n\nYou are evaluating a task that is in the 'REVIEW' column.
         Task Title: " . $task['title'] . "
         Task Description & Acceptance Criteria: " . $task['description'] . 
         $codeBlock . "
 
         Please analyze the provided code against the Acceptance Criteria and Task Description.
         1. Generate a short bullet-point test checklist based on the Acceptance Criteria, and evaluate if the code fulfills them.
-        2. Give your final decision: either [PASS] if the code is correct, complete, and meets the criteria, or [FAIL] if the code is missing, incorrect, buggy, or does not meet the criteria.
+        2. Give your final decision: either [PASS] if the code is correct/acceptable for your persona, or [FAIL] if the code is missing or unacceptable.
         
         Format your response EXACTLY like this:
         **AI PO Review Checklist:**
@@ -401,7 +418,7 @@ class TaskAiService
         
         **Decision:** [PASS] or [FAIL]
         
-        **Feedback:** (Your brief reasoning)";
+        **Feedback:** (Your brief reasoning in the tone of your assigned persona)";
 
         $reviewResult = $this->geminiService->askTaipo($prompt);
         
@@ -413,9 +430,14 @@ class TaskAiService
         $newDescription = $task['description'] . "\n\n---\n" . $reviewResult;
         
         $newStatus = ($decision === 'PASS') ? 'DONE' : 'IMPLEMENTATION WIP:3';
+        $mrStatus = ($decision === 'PASS') ? 'merged' : 'changes_requested';
+
+        $prefix = Config::getTablePrefix();
+        $mrStmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET mr_status = :mr_status WHERE id = :id");
+        $mrStmt->execute([':mr_status' => $mrStatus, ':id' => $taskId]);
 
         $this->taskService->updateStatus($taskId, $newStatus, $projectName, $userId ?? 0, $isInstructor);
-        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['type'] ?? 'feature', $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
 
         return [
             'status' => $newStatus,
@@ -518,24 +540,20 @@ class TaskAiService
             }
 
             if ($originalTask) {
-                $spText = "**Estimate:** " . $est['story_points'] . " SP\n\n";
-                // Only prepend if not already prepended
                 $newDesc = $originalTask['description'];
-                if (strpos($newDesc, "**Estimate:**") === false) {
-                    // Check if old "Becslés" is there and replace it, otherwise prepend
-                    if (strpos($newDesc, "**Becslés:**") !== false) {
-                        $newDesc = str_replace("**Becslés:**", "**Estimate:**", $newDesc);
-                    } else {
-                        $newDesc = $spText . $newDesc;
-                    }
-                }
+                // Clean up any existing **Estimate:** or **Becslés:** text
+                $newDesc = preg_replace('/^\*\*(Estimate|Becslés):\*\* \d+ SP\n\n/', '', $newDesc);
 
-                $this->taskService->updateTask($est['id'], $originalTask['title'], $newDesc, $originalTask['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+                $this->taskService->updateTask($est['id'], $originalTask['title'], $newDesc, $originalTask['type'] ?? 'feature', $originalTask['updated_at'] ?? null, $userId ?? 0, $isInstructor);
                 
-                // Update priority (is_important)
+                // Update priority (is_important) and story_points
                 $prefix = Config::getTablePrefix();
-                $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET is_important = :is_important WHERE id = :id");
-                $stmt->execute([':is_important' => $est['priority'], ':id' => $est['id']]);
+                $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET is_important = :is_important, story_points = :story_points WHERE id = :id");
+                $stmt->execute([
+                    ':is_important' => $est['priority'],
+                    ':story_points' => (int)$est['story_points'],
+                    ':id' => $est['id']
+                ]);
                 
                 $refinedCount++;
             }
@@ -569,8 +587,166 @@ class TaskAiService
         
         $newDescription = $task['description'] . "\n\n### Acceptance Criteria\n" . $criteria;
         
-        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
+        $this->taskService->updateTask($taskId, $task['title'], $newDescription, $task['type'] ?? 'feature', $task['updated_at'] ?? null, $userId ?? 0, $isInstructor);
 
         return $newDescription;
+    }
+
+    public function generateStandup(string $projectName, ?int $userId = null, bool $isInstructor = false): string
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $prefix = Config::getTablePrefix();
+        $stmt = $this->pdo->prepare("SELECT title, status, description FROM {$prefix}tasks WHERE project_name = :project_name");
+        $stmt->execute([':project_name' => $projectName]);
+        $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $doneTasks = [];
+        $wipTasks = [];
+        $todoTasks = [];
+
+        foreach ($tasks as $task) {
+            if (str_contains($task['status'], 'DONE')) {
+                $doneTasks[] = $task['title'];
+            } elseif (str_contains($task['status'], 'IMPLEMENTATION') || str_contains($task['status'], 'REVIEW')) {
+                $wipTasks[] = $task['title'];
+            } else {
+                $todoTasks[] = $task['title'];
+            }
+        }
+
+        $contextData = "Done recently:\n- " . implode("\n- ", $doneTasks) . "\n\n" .
+                       "In Progress:\n- " . implode("\n- ", $wipTasks) . "\n\n" .
+                       "Up Next:\n- " . implode("\n- ", array_slice($todoTasks, 0, 5));
+
+        $prompt = "You are a friendly Scrum Master conducting a Daily Standup (Daily Scrum). " .
+                  "Here is the current state of the board for the project '{$projectName}':\n\n{$contextData}\n\n" .
+                  "Please write a short, engaging Daily Standup summary in English. Focus on what was achieved, what is currently happening, and what is coming next. Use emojis appropriately. Keep it concise, around 150-200 words.";
+
+        return $this->geminiService->askTaipo($prompt);
+    }
+
+    public function exportProjectToZip(string $projectName, ?int $userId = null, bool $isInstructor = false): ?string
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $prefix = Config::getTablePrefix();
+        $stmt = $this->pdo->prepare("SELECT id, title, generated_code FROM {$prefix}tasks WHERE project_name = :project_name AND generated_code IS NOT NULL AND generated_code != ''");
+        $stmt->execute([':project_name' => $projectName]);
+        $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($tasks)) {
+            return null;
+        }
+
+        $tempFile = tempnam(sys_get_temp_dir(), 'export_');
+        $zip = new \ZipArchive();
+        if ($zip->open($tempFile, \ZipArchive::CREATE) !== true) {
+            throw new \Exception("Cannot create zip archive.");
+        }
+
+        foreach ($tasks as $task) {
+            $code = $task['generated_code'];
+            $extension = 'txt';
+            
+            if (preg_match('/```([a-zA-Z0-9]+)\n(.*?)```/s', $code, $matches)) {
+                $lang = strtolower($matches[1]);
+                $code = trim($matches[2]);
+                
+                $langMap = [
+                    'php' => 'php', 'javascript' => 'js', 'js' => 'js',
+                    'python' => 'py', 'py' => 'py', 'html' => 'html',
+                    'css' => 'css', 'java' => 'java', 'csharp' => 'cs',
+                    'c++' => 'cpp', 'cpp' => 'cpp', 'sql' => 'sql'
+                ];
+                if (isset($langMap[$lang])) {
+                    $extension = $langMap[$lang];
+                }
+            }
+
+            $cleanTitle = preg_replace('/[^a-zA-Z0-9]/', '_', $task['title']);
+            $filename = "Task_{$task['id']}_{$cleanTitle}.{$extension}";
+
+            $zip->addFromString($filename, $code);
+        }
+
+        $zip->close();
+        $content = file_get_contents($tempFile);
+        unlink($tempFile);
+        
+        return $content;
+    }
+
+    public function translateProjectTasks(string $projectName, ?int $userId = null, bool $isInstructor = false): int
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $tasks = $this->taskService->getTasksByProject($projectName, $userId ?? 0, $isInstructor);
+        
+        if (empty($tasks)) {
+            return 0;
+        }
+
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $taskDataForPrompt = [];
+        foreach ($tasks as $t) {
+            $taskDataForPrompt[] = [
+                'id' => $t['id'],
+                'title' => $t['title'],
+                'description' => $t['description']
+            ];
+        }
+
+        $prompt = "You are an automated translator. Translate the 'title' and 'description' of the following tasks into the requested language.\n";
+        $prompt .= "- 'id': same as input\n";
+        $prompt .= "- 'title': the translated title\n";
+        $prompt .= "- 'description': the translated description\n\n";
+        
+        $prompt .= "Tasks to translate:\n" . json_encode($taskDataForPrompt, JSON_UNESCAPED_UNICODE) . "\n";
+
+        $response = $this->geminiService->askTaipo($prompt, "application/json");
+        
+        // Clean up markdown block if the model included it
+        $response = preg_replace('/```json\s*/i', '', $response);
+        $response = preg_replace('/```\s*/', '', $response);
+
+        // Extract JSON array
+        $start = strpos($response, '[');
+        $end = strrpos($response, ']');
+        if ($start !== false && $end !== false) {
+            $response = substr($response, $start, $end - $start + 1);
+        }
+
+        $translations = json_decode(trim($response), true);
+        if (!is_array($translations)) {
+            error_log("Failed to parse AI translation response. Raw response: " . $response);
+            throw new GeminiApiException("Failed to parse AI response into JSON array.");
+        }
+
+        $count = 0;
+        $prefix = Config::getTablePrefix();
+        $stmt = $this->pdo->prepare("UPDATE {$prefix}tasks SET title = :title, description = :description WHERE id = :id AND project_name = :project_name");
+
+        foreach ($translations as $t) {
+            if (isset($t['id'], $t['title'], $t['description'])) {
+                $stmt->execute([
+                    ':title' => $t['title'],
+                    ':description' => $t['description'],
+                    ':id' => $t['id'],
+                    ':project_name' => $projectName
+                ]);
+                $count += $stmt->rowCount();
+            }
+        }
+
+        return $count;
     }
 }

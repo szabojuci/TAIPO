@@ -199,7 +199,7 @@ class Database
     private function runMigrations(string $prefix): void
     {
         // Task migrations
-        $this->ensureColumnsExist($prefix . 'tasks', ['is_subtask', 'po_comments', 'generated_code', 'position', 'title', 'updated_at', 'parent_id']);
+        $this->ensureColumnsExist($prefix . 'tasks', ['is_subtask', 'po_comments', 'generated_code', 'position', 'title', 'updated_at', 'parent_id', 'type', 'mr_status', 'story_points']);
         $this->migrateTaskTitles();
 
         // Project and Usage migrations
@@ -320,6 +320,7 @@ class Database
             'user_id' => ['type' => 'INTEGER', 'default' => 'NULL'],
             'team_id' => ['type' => 'INTEGER', 'default' => 'NULL'],
             'parent_id' => ['type' => 'INTEGER', 'default' => 'NULL'],
+            'story_points' => ['type' => 'INTEGER', 'default' => '0'],
             'updated_at' => [
                 'type' => ($dbType === 'pgsql' || $dbType === 'oci' ? 'TIMESTAMP' : 'DATETIME'),
                 'default' => ($dbType === 'pgsql' || $dbType === 'oci' ? 'CURRENT_TIMESTAMP' : "'2026-03-16 13:20:00'")

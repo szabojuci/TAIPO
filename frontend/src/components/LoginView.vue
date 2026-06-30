@@ -18,6 +18,7 @@
                             type="text"
                             placeholder="username"
                             id="username-input"
+                            autocomplete="off"
                             class="input input-bordered w-full"
                             required
                         >
@@ -34,6 +35,7 @@
                             type="password"
                             placeholder="••••••••"
                             id="password-input"
+                            autocomplete="new-password"
                             class="input input-bordered w-full"
                             required
                         >

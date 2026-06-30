@@ -57,6 +57,8 @@ class DatabaseConfig
                     parent_id INTEGER DEFAULT NULL,
                     po_comments TEXT DEFAULT NULL,
                     generated_code TEXT DEFAULT NULL,
+                    type VARCHAR(50) DEFAULT 'feature',
+                    mr_status VARCHAR(50) DEFAULT NULL,
                     position INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,

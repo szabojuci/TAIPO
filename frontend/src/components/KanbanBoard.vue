@@ -251,29 +251,34 @@ const closeTaskModal = () => {
 };
 
 const handleSaveTask = async (payload) => {
+    // Capture the task being edited before closing the modal (which clears it)
+    const currentTask = taskToEdit.value;
+    
     // Close modal immediately
     closeTaskModal();
 
-    let title, description, priority;
+    let title, description, priority, type;
 
     if (typeof payload === "object") {
         title = payload.title;
         description = payload.description;
         priority = payload.priority;
+        type = payload.type || 'feature';
     } else {
         // Fallback for simple string (legacy)
         title = payload;
         description = "";
         priority = 0;
+        type = 'feature';
     }
 
     if (!title) return;
     try {
-        if (taskToEdit.value) {
-            await api.editTask(taskToEdit.value.id, title, description, taskToEdit.value.updated_at);
+        if (currentTask) {
+            await api.editTask(currentTask.id, title, description, type, currentTask.updated_at);
             emit("task-updated");
         } else {
-            await api.addTask(props.currentProject, title, description, priority);
+            await api.addTask(props.currentProject, title, description, priority, type);
             emit("task-added");
         }
     } catch (e) {

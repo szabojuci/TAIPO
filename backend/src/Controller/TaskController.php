@@ -32,6 +32,7 @@ class TaskController
         $newTaskDescription = trim($_POST['description'] ?? '');
         $projectForAdd = strip_tags(trim($_POST['current_project'] ?? ''));
         $isImportant = filter_var($_POST['is_important'] ?? 0, FILTER_VALIDATE_INT);
+        $type = strip_tags(trim($_POST['type'] ?? 'feature'));
 
         if (!empty($newTitle) && !empty($projectForAdd)) {
             if (strlen($newTitle) > Config::getMaxTitleLength() || strlen($newTaskDescription) > Config::getMaxDescriptionLength()) {
@@ -42,9 +43,9 @@ class TaskController
             try {
                 $userId = $_SESSION['user_id'] ?? 0;
                 $isInstructor = $_SESSION['is_instructor'] ?? false;
-                $newId = $this->taskService->addTask($projectForAdd, $newTitle, $newTaskDescription, $isImportant, $userId, $isInstructor);
+                $newId = $this->taskService->addTask($projectForAdd, $newTitle, $newTaskDescription, $isImportant, $type, $userId, $isInstructor);
                 header(Config::APP_JSON);
-                echo json_encode(['success' => true, 'id' => $newId, 'title' => $newTitle, 'description' => $newTaskDescription, 'is_important' => $isImportant]);
+                echo json_encode(['success' => true, 'id' => $newId, 'title' => $newTitle, 'description' => $newTaskDescription, 'is_important' => $isImportant, 'type' => $type]);
             } catch (Exception $e) {
                 http_response_code(500);
                 error_log("Error adding task: " . $e->getMessage());
@@ -148,6 +149,7 @@ class TaskController
         $taskId = filter_var($_POST['task_id'] ?? null, FILTER_VALIDATE_INT);
         $newTitle = strip_tags(trim($_POST['title'] ?? ''));
         $newDescription = trim($_POST['description'] ?? '');
+        $type = strip_tags(trim($_POST['type'] ?? 'feature'));
         $lastUpdatedAt = $_POST['last_updated_at'] ?? null;
 
         if (is_numeric($taskId) && !empty($newTitle)) {
@@ -159,7 +161,7 @@ class TaskController
             try {
                 $userId = $_SESSION['user_id'] ?? 0;
                 $isInstructor = $_SESSION['is_instructor'] ?? false;
-                $affected = $this->taskService->updateTask((int)$taskId, $newTitle, $newDescription, $lastUpdatedAt, $userId, $isInstructor);
+                $affected = $this->taskService->updateTask((int)$taskId, $newTitle, $newDescription, $type, $lastUpdatedAt, $userId, $isInstructor);
                 if ($affected === 0) {
                     $taskExists = $this->taskService->getTaskById((int)$taskId);
                     if (!$taskExists) {
@@ -244,6 +246,7 @@ class TaskController
     {
         $taskId = $_POST['task_id'] ?? null;
         $query = trim($_POST['query'] ?? '');
+        $persona = $_POST['persona'] ?? 'mentor';
 
         if (empty($taskId) || empty($query)) {
             http_response_code(400);
@@ -254,7 +257,7 @@ class TaskController
         try {
             $userId = $_SESSION['user_id'] ?? 0;
             $isInstructor = $_SESSION['is_instructor'] ?? false;
-            $answer = $this->taskAiService->queryTask($taskId, $query, $userId, $isInstructor);
+            $answer = $this->taskAiService->queryTask($taskId, $query, $persona, $userId, $isInstructor);
             header(Config::APP_JSON);
             echo json_encode(['success' => true, 'answer' => $answer]);
         } catch (GeminiApiException $e) {
@@ -416,7 +419,8 @@ class TaskController
         try {
             $userId = $_SESSION['user_id'] ?? 0;
             $isInstructor = $_SESSION['is_instructor'] ?? false;
-            $result = $this->taskAiService->aiReviewTask($taskId, $userId, $isInstructor);
+            $persona = strip_tags(trim($_POST['persona'] ?? 'mentor'));
+            $result = $this->taskAiService->aiReviewTask($taskId, $userId, $isInstructor, $persona);
 
             header(Config::APP_JSON);
             echo json_encode(['success' => true, 'result' => $result]);
@@ -511,6 +515,96 @@ class TaskController
             http_response_code(500);
             error_log("Error generating criteria: " . $e->getMessage());
             echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleGenerateStandup()
+    {
+        $projectName = strip_tags(trim($_POST['project_name'] ?? ''));
+        if (empty($projectName)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Project name is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $standupText = $this->taskAiService->generateStandup($projectName, $userId, $isInstructor);
+
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'standup' => $standupText]);
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => "Unauthorized."]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Error generating standup: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Server error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleExportProject()
+    {
+        $projectName = strip_tags(trim($_GET['project_name'] ?? ''));
+        if (empty($projectName)) {
+            http_response_code(400);
+            echo "Project name is required.";
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            
+            // Generate zip file via service
+            $zipContent = $this->taskAiService->exportProjectToZip($projectName, $userId, $isInstructor);
+            
+            if (!$zipContent) {
+                http_response_code(404);
+                echo "No code generated for this project yet.";
+                return;
+            }
+
+            $filename = preg_replace('/[^a-zA-Z0-9_.-]/', '_', $projectName) . "_export.zip";
+            
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            header('Content-Length: ' . strlen($zipContent));
+            header('Cache-Control: no-cache, no-store, must-revalidate');
+            header('Pragma: no-cache');
+            header('Expires: 0');
+            
+            echo $zipContent;
+        } catch (ProjectUnauthorizedException $e) {
+            http_response_code(403);
+            echo "Unauthorized.";
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo "Server error: " . $e->getMessage();
+        }
+    }
+
+    public function handleTranslateProject()
+    {
+        $projectName = strip_tags(trim($_POST['project_name'] ?? ''));
+
+        if (empty($projectName)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Project name is required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $count = $this->taskAiService->translateProjectTasks($projectName, $userId, $isInstructor);
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'count' => $count]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            header(Config::APP_JSON);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
         }
     }
 }

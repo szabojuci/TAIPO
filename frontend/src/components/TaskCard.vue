@@ -54,10 +54,14 @@
                     </button>
                 </div>
 
-                <div class="dropdown dropdown-end">
-                    <button
-                        @click.stop
-                        class="btn btn-ghost btn-xs btn-circle text-base-content/50"
+                <div class="flex items-center gap-2">
+                    <div v-if="task.story_points > 0" class="badge badge-primary badge-sm font-bold opacity-80" title="Story Points">
+                        🔵 {{ task.story_points }} SP
+                    </div>
+                    <div class="dropdown dropdown-end">
+                        <button
+                            @click.stop
+                            class="btn btn-ghost btn-xs btn-circle text-base-content/50"
                     >
                         <svg
                             xmlns="http://www.w3.org/2000/svg"
@@ -139,6 +143,24 @@
                             </span>
                         </li>
                     </ul>
+                </div>
+                </div> <!-- Close flex items-center gap-2 -->
+            </div>
+
+            <!-- Feature / Bug Badge -->
+            <div class="flex flex-wrap gap-1 mb-1">
+                <div v-if="task.type === 'bug'" class="badge badge-error badge-xs text-error-content shadow-sm">
+                    🐛 Bug
+                </div>
+                <!-- MR Status Badges -->
+                <div v-if="task.mr_status === 'opened'" class="badge badge-warning badge-xs shadow-sm">
+                    🟡 MR Opened
+                </div>
+                <div v-else-if="task.mr_status === 'merged'" class="badge badge-success badge-xs text-success-content shadow-sm">
+                    🟢 MR Merged
+                </div>
+                <div v-else-if="task.mr_status === 'changes_requested'" class="badge badge-error badge-xs text-error-content shadow-sm">
+                    🔴 MR Changes Req.
                 </div>
             </div>
 
