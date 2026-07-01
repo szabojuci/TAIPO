@@ -46,7 +46,7 @@ export const api = {
         return response.data;
     },
 
-    async addTask(project, title, description, priority = 0, type = 'feature') {
+    async addTask(project, title, description, priority = 0, type = 'feature', storyPoints = null) {
         // PHP expects POST form-data or JSON with specific structure.
         return client.post('/', {
             action: 'add_task',
@@ -54,7 +54,8 @@ export const api = {
             title: title,
             description: description,
             is_important: priority,
-            type: type
+            type: type,
+            story_points: storyPoints
         });
     },
 
@@ -98,13 +99,16 @@ export const api = {
         return response.data;
     },
 
-    async editTask(taskId, title, description, type, lastUpdatedAt = null) {
+    async editTask(taskId, title, description, type, storyPoints = null, mrUrl = null, mrStatus = null, lastUpdatedAt = null) {
         return client.post('/', {
             action: 'edit_task',
             task_id: taskId,
             title: title,
             description: description,
             type: type,
+            story_points: storyPoints,
+            mr_url: mrUrl,
+            mr_status: mrStatus,
             last_updated_at: lastUpdatedAt
         });
     },
@@ -156,6 +160,33 @@ export const api = {
         const response = await client.post('/', {
             action: 'generate_project_report',
             project_name: projectName
+        });
+        return response.data;
+    },
+
+    async queryProject(projectName, query, persona = 'po') {
+        const response = await client.post('/', {
+            action: 'query_project',
+            project_name: projectName,
+            query: query,
+            persona: persona
+        });
+        return response.data;
+    },
+
+    async getComments(taskId) {
+        const response = await client.post('/', {
+            action: 'get_comments',
+            task_id: taskId
+        });
+        return response.data;
+    },
+
+    async addComment(taskId, content) {
+        const response = await client.post('/', {
+            action: 'add_comment',
+            task_id: taskId,
+            content: content
         });
         return response.data;
     },

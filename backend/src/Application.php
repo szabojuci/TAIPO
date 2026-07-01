@@ -18,6 +18,8 @@ use App\Service\SettingsService;
 use App\Service\RequirementService;
 use App\Service\TeamService;
 use App\Service\TaskAiService;
+use App\Service\CommentService;
+use App\Controller\CommentController;
 use App\Exception\GeminiApiException;
 use App\Exception\ProjectAlreadyExistsException;
 use App\Utils;
@@ -41,6 +43,8 @@ class Application
     private AuthController $authController;
     private TeamController $teamController;
     private TeamService $teamService;
+    private CommentController $commentController;
+    private CommentService $commentService;
 
     public function run()
     {
@@ -127,7 +131,7 @@ class Application
         $taskActions = [
             'add_task', 'delete_task', 'toggle_importance', 'update_status',
             'reorder_tasks', 'edit_task', 'generate_code', 'generate_project_tasks',
-            'decompose_task', 'commit_to_github', 'query_task', 'create_project_from_spec', 'ai_review_task',
+            'decompose_task', 'commit_to_github', 'query_task', 'query_project', 'create_project_from_spec', 'ai_review_task',
             'generate_project_report', 'refine_backlog', 'generate_acceptance_criteria', 'generate_standup', 'export_project', 'translate_project'
         ];
         if (in_array($action, $taskActions)) {
@@ -153,6 +157,15 @@ class Application
         ];
         if (in_array($action, $teamActions)) {
             $this->handleTeamAction($action);
+            exit;
+        }
+
+        // Protected Actions - Comment Actions
+        $commentActions = [
+            'add_comment', 'get_comments'
+        ];
+        if (in_array($action, $commentActions)) {
+            $this->handleCommentAction($action);
             exit;
         }
 
@@ -338,6 +351,8 @@ class Application
             $this->authController = new AuthController($pdo);
             $this->teamService = new TeamService($pdo);
             $this->teamController = new TeamController($this->teamService);
+            $this->commentService = new CommentService($pdo);
+            $this->commentController = new CommentController($this->commentService);
         } catch (Exception $e) {
             $error = $e->getMessage();
         }
@@ -448,6 +463,9 @@ class Application
             case 'query_task':
                 $this->taskController->handleQueryTask();
                 break;
+            case 'query_project':
+                $this->taskController->handleQueryProject();
+                break;
             case 'create_project_from_spec':
                 $this->taskController->handleCreateFromSpec();
                 break;
@@ -471,6 +489,20 @@ class Application
                 break;
             case 'translate_project':
                 $this->taskController->handleTranslateProject();
+                break;
+            default:
+                break;
+        }
+    }
+
+    private function handleCommentAction(string $action): void
+    {
+        switch ($action) {
+            case 'add_comment':
+                $this->commentController->handleAddComment();
+                break;
+            case 'get_comments':
+                $this->commentController->handleGetComments();
                 break;
             default:
                 break;

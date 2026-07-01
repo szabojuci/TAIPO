@@ -199,7 +199,7 @@ class Database
     private function runMigrations(string $prefix): void
     {
         // Task migrations
-        $this->ensureColumnsExist($prefix . 'tasks', ['is_subtask', 'po_comments', 'generated_code', 'position', 'title', 'updated_at', 'parent_id', 'type', 'mr_status', 'story_points']);
+        $this->ensureColumnsExist($prefix . 'tasks', ['is_subtask', 'po_comments', 'generated_code', 'position', 'title', 'updated_at', 'parent_id', 'type', 'mr_status', 'mr_url', 'story_points']);
         $this->migrateTaskTitles();
 
         // Project and Usage migrations

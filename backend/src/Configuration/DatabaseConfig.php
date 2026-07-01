@@ -59,10 +59,20 @@ class DatabaseConfig
                     generated_code TEXT DEFAULT NULL,
                     type VARCHAR(50) DEFAULT 'feature',
                     mr_status VARCHAR(50) DEFAULT NULL,
+                    mr_url VARCHAR(255) DEFAULT NULL,
                     position INTEGER DEFAULT 0,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY(project_name) REFERENCES projects(name) ON DELETE RESTRICT
+                )",
+                'task_comments' => "CREATE TABLE IF NOT EXISTS task_comments (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    task_id INTEGER NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    content TEXT NOT NULL,
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
                 )",
                 'requirements' => "CREATE TABLE IF NOT EXISTS requirements (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,

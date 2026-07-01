@@ -129,6 +129,91 @@
                     </div>
                 </div>
 
+                <!-- Technical Details Section -->
+                <div class="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="group">
+                        <label class="block text-[11px] font-bold text-base-content/60 uppercase tracking-widest mb-2.5 ml-1 transition-colors group-focus-within:text-primary" for="story-points">
+                            Story Points
+                        </label>
+                        <select
+                            v-model="storyPoints"
+                            :disabled="isReadOnly"
+                            id="story-points"
+                            class="select select-bordered w-full bg-base-100 focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                        >
+                            <option :value="null">Not Estimated</option>
+                            <option v-for="sp in [1,2,3,5,8,13,21]" :key="sp" :value="sp">{{ sp }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="group">
+                        <label class="block text-[11px] font-bold text-base-content/60 uppercase tracking-widest mb-2.5 ml-1 transition-colors group-focus-within:text-primary" for="mr-status">
+                            MR Status
+                        </label>
+                        <select
+                            v-model="mrStatus"
+                            :disabled="isReadOnly"
+                            id="mr-status"
+                            class="select select-bordered w-full bg-base-100 focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                        >
+                            <option :value="null">None</option>
+                            <option value="opened">Opened</option>
+                            <option value="merged">Merged</option>
+                            <option value="changes_requested">Changes Requested</option>
+                        </select>
+                    </div>
+                    
+                    <div class="group md:col-span-2">
+                        <label class="block text-[11px] font-bold text-base-content/60 uppercase tracking-widest mb-2.5 ml-1 transition-colors group-focus-within:text-primary" for="mr-url">
+                            Merge Request URL
+                        </label>
+                        <input
+                            v-model="mrUrl"
+                            :disabled="isReadOnly"
+                            type="text"
+                            id="mr-url"
+                            class="input input-bordered w-full bg-base-100 focus:ring-2 focus:ring-primary/50 focus:border-primary placeholder:text-base-content/40"
+                            placeholder="https://github.com/org/repo/pull/123"
+                        >
+                    </div>
+                </div>
+
+                <!-- Team Comments Section -->
+                <div v-if="isEditMode || isReadOnly" class="mb-6 border-t border-base-300 pt-6">
+                    <h4 class="text-sm font-bold text-base-content/80 mb-4 flex items-center gap-2">
+                        💬 Team Discussion
+                    </h4>
+                    
+                    <div class="space-y-4 mb-4">
+                        <div v-if="comments.length === 0" class="text-sm text-base-content/50 italic">
+                            No comments yet.
+                        </div>
+                        <div v-for="comment in comments" :key="comment.id" class="bg-base-100 border border-base-300 rounded-lg p-3">
+                            <div class="flex justify-between items-center mb-1">
+                                <span class="font-bold text-xs text-primary">{{ comment.username }}</span>
+                                <span class="text-[10px] text-base-content/50">{{ new Date(comment.created_at).toLocaleString() }}</span>
+                            </div>
+                            <p class="text-sm whitespace-pre-wrap">{{ comment.content }}</p>
+                        </div>
+                    </div>
+
+                    <div v-if="!isReadOnly" class="flex gap-2 items-end">
+                        <textarea
+                            v-model="newComment"
+                            class="textarea textarea-bordered flex-grow focus:ring-2 focus:ring-primary/50 focus:border-primary bg-base-100 text-sm leading-tight resize-none"
+                            placeholder="Write a comment..."
+                            rows="2"
+                        ></textarea>
+                        <button
+                            @click="submitComment"
+                            :disabled="!newComment.trim()"
+                            class="btn btn-primary btn-sm px-4"
+                        >
+                            Send
+                        </button>
+                    </div>
+                </div>
+
                 <!-- AI / TAIPO Feedback Section (Read-Only) -->
                 <div
                     v-if="isReadOnly && task?.po_comments"
@@ -193,6 +278,7 @@
 <script setup>
 import { ref, watch, nextTick, computed } from "vue";
 import { marked } from "marked";
+import { api } from "../../services/api.js";
 
 const props = defineProps({
     isOpen: Boolean,
@@ -217,6 +303,13 @@ const type = ref("feature");
 const hoverPriority = ref(0);
 const title = ref("");
 const description = ref("");
+const storyPoints = ref(null);
+const mrUrl = ref(null);
+const mrStatus = ref(null);
+
+const comments = ref([]);
+const newComment = ref("");
+
 const titleInput = ref(null);
 
 const formattedPoComments = computed(() => {
@@ -232,17 +325,26 @@ watch(
             if (props.task) {
                 // Edit mode
                 title.value = props.task.title || '';
-                // If title was auto-generated from description before migration, it might be messy, but assuming clean state.
                 description.value = props.task.description || '';
                 priority.value = Number(props.task.is_important) || 0;
                 type.value = props.task.type || 'feature';
+                storyPoints.value = props.task.story_points || null;
+                mrUrl.value = props.task.mr_url || null;
+                mrStatus.value = props.task.mr_status || null;
+                
+                loadComments(props.task.id);
             } else {
                 // Add mode
                 title.value = "";
                 description.value = "";
                 priority.value = 0;
                 type.value = 'feature';
+                storyPoints.value = null;
+                mrUrl.value = null;
+                mrStatus.value = null;
+                comments.value = [];
             }
+            newComment.value = "";
             hoverPriority.value = 0;
             nextTick(() => {
                 titleInput.value?.focus();
@@ -250,6 +352,30 @@ watch(
         }
     },
 );
+
+const loadComments = async (taskId) => {
+    try {
+        const response = await api.getComments(taskId);
+        if (response.success) {
+            comments.value = response.comments || [];
+        }
+    } catch (e) {
+        console.error("Error loading comments:", e);
+    }
+};
+
+const submitComment = async () => {
+    if (!newComment.value.trim() || !props.task?.id) return;
+    try {
+        const response = await api.addComment(props.task.id, newComment.value);
+        if (response.success) {
+            comments.value.push(response.comment);
+            newComment.value = "";
+        }
+    } catch (e) {
+        console.error("Error adding comment:", e);
+    }
+};
 
 const getStarColor = (index) => {
     if (index === 1) return "#EAB308"; // yellow-500
@@ -269,6 +395,14 @@ const setPriority = (p) => {
 const save = () => {
     if (!title.value) return;
 
-    emit("save", { title: title.value, description: description.value, priority: priority.value, type: type.value });
+    emit("save", { 
+        title: title.value, 
+        description: description.value, 
+        priority: priority.value, 
+        type: type.value,
+        storyPoints: storyPoints.value,
+        mrUrl: mrUrl.value,
+        mrStatus: mrStatus.value
+    });
 };
 </script>

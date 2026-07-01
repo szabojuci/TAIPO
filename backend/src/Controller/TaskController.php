@@ -33,6 +33,7 @@ class TaskController
         $projectForAdd = strip_tags(trim($_POST['current_project'] ?? ''));
         $isImportant = filter_var($_POST['is_important'] ?? 0, FILTER_VALIDATE_INT);
         $type = strip_tags(trim($_POST['type'] ?? 'feature'));
+        $storyPoints = filter_var($_POST['story_points'] ?? null, FILTER_VALIDATE_INT) ?: null;
 
         if (!empty($newTitle) && !empty($projectForAdd)) {
             if (strlen($newTitle) > Config::getMaxTitleLength() || strlen($newTaskDescription) > Config::getMaxDescriptionLength()) {
@@ -43,9 +44,9 @@ class TaskController
             try {
                 $userId = $_SESSION['user_id'] ?? 0;
                 $isInstructor = $_SESSION['is_instructor'] ?? false;
-                $newId = $this->taskService->addTask($projectForAdd, $newTitle, $newTaskDescription, $isImportant, $type, $userId, $isInstructor);
+                $newId = $this->taskService->addTask($projectForAdd, $newTitle, $newTaskDescription, $isImportant, $type, $storyPoints, $userId, $isInstructor);
                 header(Config::APP_JSON);
-                echo json_encode(['success' => true, 'id' => $newId, 'title' => $newTitle, 'description' => $newTaskDescription, 'is_important' => $isImportant, 'type' => $type]);
+                echo json_encode(['success' => true, 'id' => $newId, 'title' => $newTitle, 'description' => $newTaskDescription, 'is_important' => $isImportant, 'type' => $type, 'story_points' => $storyPoints]);
             } catch (Exception $e) {
                 http_response_code(500);
                 error_log("Error adding task: " . $e->getMessage());
@@ -150,6 +151,9 @@ class TaskController
         $newTitle = strip_tags(trim($_POST['title'] ?? ''));
         $newDescription = trim($_POST['description'] ?? '');
         $type = strip_tags(trim($_POST['type'] ?? 'feature'));
+        $storyPoints = filter_var($_POST['story_points'] ?? null, FILTER_VALIDATE_INT) ?: null;
+        $mrUrl = strip_tags(trim($_POST['mr_url'] ?? '')) ?: null;
+        $mrStatus = strip_tags(trim($_POST['mr_status'] ?? '')) ?: null;
         $lastUpdatedAt = $_POST['last_updated_at'] ?? null;
 
         if (is_numeric($taskId) && !empty($newTitle)) {
@@ -161,7 +165,7 @@ class TaskController
             try {
                 $userId = $_SESSION['user_id'] ?? 0;
                 $isInstructor = $_SESSION['is_instructor'] ?? false;
-                $affected = $this->taskService->updateTask((int)$taskId, $newTitle, $newDescription, $type, $lastUpdatedAt, $userId, $isInstructor);
+                $affected = $this->taskService->updateTask((int)$taskId, $newTitle, $newDescription, $type, $storyPoints, $mrUrl, $mrStatus, $lastUpdatedAt, $userId, $isInstructor);
                 if ($affected === 0) {
                     $taskExists = $this->taskService->getTaskById((int)$taskId);
                     if (!$taskExists) {
@@ -267,6 +271,35 @@ class TaskController
         } catch (Exception $e) {
             http_response_code(500);
             error_log("Query task error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'error' => "Gemini API error: " . $e->getMessage()]);
+        }
+    }
+
+    public function handleQueryProject()
+    {
+        $projectName = trim($_POST['project_name'] ?? '');
+        $query = trim($_POST['query'] ?? '');
+        $persona = $_POST['persona'] ?? 'po';
+
+        if (empty($projectName) || empty($query)) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'error' => "Project name and query are required."]);
+            return;
+        }
+
+        try {
+            $userId = $_SESSION['user_id'] ?? 0;
+            $isInstructor = $_SESSION['is_instructor'] ?? false;
+            $answer = $this->taskAiService->queryProject($projectName, $query, $persona, $userId, $isInstructor);
+            header(Config::APP_JSON);
+            echo json_encode(['success' => true, 'answer' => $answer]);
+        } catch (GeminiApiException $e) {
+            $code = ($e->getCode() >= 100 && $e->getCode() <= 599) ? $e->getCode() : 500;
+            http_response_code($code);
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        } catch (Exception $e) {
+            http_response_code(500);
+            error_log("Query project error: " . $e->getMessage());
             echo json_encode(['success' => false, 'error' => "Gemini API error: " . $e->getMessage()]);
         }
     }

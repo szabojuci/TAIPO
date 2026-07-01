@@ -257,13 +257,16 @@ const handleSaveTask = async (payload) => {
     // Close modal immediately
     closeTaskModal();
 
-    let title, description, priority, type;
+    let title, description, priority, type, storyPoints, mrUrl, mrStatus;
 
     if (typeof payload === "object") {
         title = payload.title;
         description = payload.description;
         priority = payload.priority;
         type = payload.type || 'feature';
+        storyPoints = payload.storyPoints || null;
+        mrUrl = payload.mrUrl || null;
+        mrStatus = payload.mrStatus || null;
     } else {
         // Fallback for simple string (legacy)
         title = payload;
@@ -275,10 +278,10 @@ const handleSaveTask = async (payload) => {
     if (!title) return;
     try {
         if (currentTask) {
-            await api.editTask(currentTask.id, title, description, type, currentTask.updated_at);
+            await api.editTask(currentTask.id, title, description, type, storyPoints, mrUrl, mrStatus, currentTask.updated_at);
             emit("task-updated");
         } else {
-            await api.addTask(props.currentProject, title, description, priority, type);
+            await api.addTask(props.currentProject, title, description, priority, type, storyPoints);
             emit("task-added");
         }
     } catch (e) {

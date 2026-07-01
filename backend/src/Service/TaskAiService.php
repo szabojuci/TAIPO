@@ -236,6 +236,35 @@ class TaskAiService
         return $answer;
     }
 
+    public function queryProject(string $projectName, string $query, string $persona = 'po', ?int $userId = null, bool $isInstructor = false): string
+    {
+        if ($userId !== null && !$this->isAuthorized($projectName, $userId, $isInstructor)) {
+            throw new ProjectUnauthorizedException($projectName);
+        }
+
+        $context = $this->getProjectContextInfo($projectName);
+        $this->geminiService->setContext($userId, $context['team_id'] ?? null);
+
+        $projectContext = $this->getProjectContextSummary($projectName);
+
+        $personaInstruction = match ($persona) {
+            'mentor' => "You are a HELPFUL MENTOR and intelligent coding assistant. You are patient, explain things clearly, and provide code snippets if needed.",
+            'developer' => "You are a PEER DEVELOPER working on the project. You focus on implementation details, code architecture, and practical solutions.",
+            default => "You are the EXPERT PRODUCT OWNER and SYSTEM ARCHITECT for this project. You focus on domain logic, business requirements, architecture, and overall vision. You provide clear, authoritative answers based on the project spec."
+        };
+
+        $prompt = "{$personaInstruction}\n\n" .
+                  "Project Context (includes requirements and current tasks):\n{$projectContext}\n\n" .
+                  "User Question: {$query}\n\n" .
+                  "Instructions:\n" .
+                  "- Answer the user's question specifically related to the project as a whole.\n" .
+                  "- Adopt your persona entirely. Do not break character.\n" .
+                  "- Refrain from lengthy intros.\n" .
+                  "- CRITICAL: Do NOT copy or repeat the context or question verbatim. Always use your own words.";
+
+        return $this->geminiService->askTaipo($prompt);
+    }
+
     private function formatTaskContext(array $task): string
     {
         $taskContext = "Focus on this Specific Task:";

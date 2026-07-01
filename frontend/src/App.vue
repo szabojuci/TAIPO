@@ -52,10 +52,10 @@
                 </div>
 
                 <!-- Spacer & Centered Project Name -->
-                <div class="flex-1 flex justify-center">
-                    <span v-if="currentProject" class="badge badge-lg badge-primary font-bold">
-                        {{ currentProject }}
-                    </span>
+                <div class="flex-1 flex justify-center px-4">
+                    <div v-if="currentProject" class="badge badge-lg badge-primary font-bold max-w-[150px] sm:max-w-xs md:max-w-md" :title="currentProject">
+                        <span class="truncate block w-full text-center">{{ currentProject }}</span>
+                    </div>
                     <span v-else class="text-sm opacity-50">
                         Select a project
                     </span>
@@ -84,6 +84,10 @@
                         <option value="strict">👔 Strict PO</option>
                         <option value="ceo">🚀 Startup CEO</option>
                     </select>
+
+                    <button @click="isProjectChatModalOpen = true" class="btn btn-outline btn-sm btn-primary gap-2" title="Ask Project PO">
+                        💬 Ask PO
+                    </button>
 
                     <button @click="handleGenerateStandup" class="btn btn-outline btn-sm btn-info gap-2" title="Daily Standup">
                         <span v-if="standupLoading" class="loading loading-spinner loading-xs"></span>
@@ -179,6 +183,9 @@
             :loading="codeLoading" :error="codeError" @close="isCodeModalOpen = false"
             @regenerate="handleRegenerateCode" @task-updated="refreshTasks"/>
 
+        <ProjectChatModal :is-open="isProjectChatModalOpen" :project-name="currentProject"
+            @close="isProjectChatModalOpen = false" />
+
         <TaskQueryModal :is-open="isQueryModalOpen" :loading="queryLoading" :task="queryTaskTarget" :answer="queryAnswer" :error="queryError"
             :max-query-length="appConfig.maxQueryLength" @close="isQueryModalOpen = false"
             @submit="handleQueryTaskSubmit" />
@@ -226,6 +233,7 @@ import KanbanBoard from './components/KanbanBoard.vue';
 import ProjectSidebar from './components/ProjectSidebar.vue';
 import CodeGenerationModal from './components/modals/CodeGenerationModal.vue';
 import TaskQueryModal from './components/modals/TaskQueryModal.vue';
+import ProjectChatModal from './components/modals/ProjectChatModal.vue';
 import ReportModal from './components/modals/ReportModal.vue';
 import ApiCostModal from './components/modals/ApiCostModal.vue';
 import RequirementModal from './components/RequirementModal.vue';
@@ -301,6 +309,8 @@ const isRequirementModalOpen = ref(false);
 const isApiCostModalOpen = ref(false);
 const isPrivacyModalOpen = ref(false);
 const isTeamModalOpen = ref(false);
+const isProjectChatModalOpen = ref(false);
+
 
 // Report State
 const isReportModalOpen = ref(false);
